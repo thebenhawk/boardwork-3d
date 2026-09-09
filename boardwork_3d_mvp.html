@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boardwork 3D - MVP Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: #e0e6ed;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            gap: 1px;
+            background: #000;
+        }
+
+        /* ========== LEFT PANEL: CONTROLS ========== */
+        .control-panel {
+            width: 340px;
+            background: linear-gradient(180deg, #1a2332 0%, #141d2e 100%);
+            border-right: 1px solid rgba(0, 212, 255, 0.2);
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-panel h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #00d4ff;
+            margin-bottom: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .control-panel p {
+            font-size: 12px;
+            color: #7a8fa3;
+            margin-bottom: 24px;
+            font-weight: 500;
+        }
+
+        .control-section {
+            margin-bottom: 28px;
+        }
+
+        .control-section h2 {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #5a9fb5;
+            letter-spacing: 1.2px;
+            margin-bottom: 12px;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+            padding-bottom: 8px;
+        }
+
+        .control-group {
+            margin-bottom: 16px;
+        }
+
+        .control-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: #9eb8cc;
+            margin-bottom: 8px;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 5px;
+            background: linear-gradient(90deg, #1a2332 0%, #2a3a4a 100%);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(0, 212, 255, 0.6), inset 0 0 4px rgba(0,0,0,0.4);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 0 12px rgba(0, 212, 255, 0.6);
+        }
+
+        .value-badge {
+            min-width: 50px;
+            text-align: right;
+            font-size: 13px;
+            font-weight: 600;
+            color: #00ff88;
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 255, 136, 0.1);
+            padding: 2px 8px;
+            border-radius: 3px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(26, 35, 50, 0.6);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            color: #00d4ff;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        select:hover {
+            border-color: rgba(0, 212, 255, 0.6);
+            box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+        }
+
+        select option {
+            background: #1a2332;
+            color: #00d4ff;
+        }
+
+        .ball-selector-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 8px;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        .ball-option {
+            padding: 10px;
+            background: rgba(26, 35, 50, 0.5);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 11px;
+            color: #9eb8cc;
+        }
+
+        .ball-option:hover {
+            border-color: rgba(0, 212, 255, 0.6);
+            background: rgba(26, 35, 50, 0.8);
+            color: #00d4ff;
+        }
+
+        .ball-option.selected {
+            background: rgba(0, 212, 255, 0.15);
+            border-color: rgba(0, 212, 255, 0.8);
+            color: #00d4ff;
+            box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+        }
+
+        .ball-option-name {
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+
+        .ball-option-specs {
+            font-size: 10px;
+            color: #7a8fa3;
+            line-height: 1.3;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 32px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #00d4ff, #00ff88);
+            color: #0a0e27;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.4);
+            color: #00d4ff;
+        }
+
+        /* ========== CENTER PANEL: VISUALIZATION ========== */
+        .visualization-panel {
+            flex: 1;
+            background: linear-gradient(135deg, #0f1419 0%, #1a202c 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 4px;
+            background: radial-gradient(ellipse at center, #1a2a3a 0%, #0f1419 100%);
+        }
+
+        /* ========== RIGHT PANEL: RESULTS ========== */
+        .results-panel {
+            width: 360px;
+            background: linear-gradient(180deg, #1a2332 0%, #141d2e 100%);
+            border-left: 1px solid rgba(0, 212, 255, 0.2);
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .results-panel h1 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #00d4ff;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+        }
+
+        .result-section {
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0, 212, 255, 0.1);
+        }
+
+        .result-section:last-child {
+            border-bottom: none;
+        }
+
+        .result-section h3 {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #5a9fb5;
+            letter-spacing: 1.2px;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .result-label {
+            color: #9eb8cc;
+            font-weight: 500;
+        }
+
+        .result-value {
+            color: #00ff88;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 255, 136, 0.1);
+            padding: 4px 8px;
+            border-radius: 3px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .status-optimal { background: #00ff88; }
+        .status-warning { background: #ffaa00; }
+        .status-poor { background: #ff4444; }
+
+        .loading {
+            text-align: center;
+            color: #7a8fa3;
+            font-size: 13px;
+            margin-top: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .loading:not(.active) {
+            display: none;
+        }
+
+        .error {
+            color: #ff6b6b;
+            font-size: 12px;
+            padding: 12px;
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid rgba(255, 107, 107, 0.3);
+            border-radius: 3px;
+            margin-bottom: 16px;
+        }
+
+        .ball-info {
+            background: rgba(0, 212, 255, 0.05);
+            padding: 12px;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 4px;
+            margin-bottom: 16px;
+            font-size: 11px;
+        }
+
+        .ball-info-name {
+            font-weight: 600;
+            color: #00d4ff;
+            margin-bottom: 6px;
+        }
+
+        .ball-info-specs {
+            color: #9eb8cc;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- LEFT PANEL: CONTROLS -->
+        <div class="control-panel">
+            <h1>Boardwork 3D</h1>
+            <p>Ball Physics Simulator</p>
+
+            <!-- BALL SELECTOR -->
+            <div class="control-section">
+                <h2>SELECT BALL</h2>
+                <div class="control-group">
+                    <label for="ballCategory">Filter by:</label>
+                    <select id="ballCategory">
+                        <option value="">All Balls</option>
+                        <option value="heavy_oil">Heavy Oil Specialists</option>
+                        <option value="medium_oil">Medium Oil</option>
+                        <option value="light_oil">Light Oil / Broken</option>
+                        <option value="entry_level">Entry Level</option>
+                        <option value="spare">Spare Balls</option>
+                    </select>
+                </div>
+                <div id="ballSelectorList" class="ball-selector-list"></div>
+                <div id="ballError" class="error" style="display: none;"></div>
+            </div>
+
+            <!-- PATTERN SELECTOR -->
+            <div class="control-section">
+                <h2>OIL PATTERN</h2>
+                <div class="control-group">
+                    <select id="oilPattern">
+                        <option value="house_shot">House Shot</option>
+                        <option value="pba_50">PBA 50 (Heavy)</option>
+                        <option value="pba_42">PBA 42</option>
+                        <option value="pba_40">PBA 40</option>
+                        <option value="pba_37">PBA 37</option>
+                        <option value="pba_scorpion">PBA Scorpion</option>
+                        <option value="pba_shark">PBA Shark</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="oilCondition">Lane Condition:</label>
+                    <select id="oilCondition">
+                        <option value="fresh">Fresh</option>
+                        <option value="transition">Transition</option>
+                        <option value="broken">Broken</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- BALL SPEED & RPM -->
+            <div class="control-section">
+                <h2>RELEASE CONDITIONS</h2>
+
+                <div class="control-group">
+                    <label for="ballSpeed">Ball Speed (mph):</label>
+                    <div class="slider-container">
+                        <input type="range" id="ballSpeed" min="14" max="24" value="18" step="0.5">
+                        <span class="value-badge"><span id="speedValue">18.0</span></span>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label for="ballRPM">Ball RPM:</label>
+                    <div class="slider-container">
+                        <input type="range" id="ballRPM" min="50" max="400" value="300" step="10">
+                        <span class="value-badge"><span id="rpmValue">300</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BUTTONS -->
+            <div class="button-group">
+                <button class="btn-primary" id="simulateBtn">SIMULATE</button>
+                <button class="btn-secondary" id="resetBtn">RESET</button>
+            </div>
+        </div>
+
+        <!-- CENTER PANEL: VISUALIZATION -->
+        <div class="visualization-panel">
+            <canvas id="laneCanvas" width="1000" height="800"></canvas>
+            <div id="loading" class="loading">Initializing simulator...</div>
+        </div>
+
+        <!-- RIGHT PANEL: RESULTS -->
+        <div class="results-panel">
+            <h1>PREDICTION</h1>
+
+            <div id="ballInfoDisplay" class="ball-info" style="display: none;">
+                <div class="ball-info-name" id="ballDisplayName"></div>
+                <div class="ball-info-specs" id="ballDisplaySpecs"></div>
+            </div>
+
+            <div id="resultsContent" style="display: none;">
+                <!-- ENTRY METRICS (Agent #9 & #12) -->
+                <div class="result-section">
+                    <h3>ENTRY ANGLE (Agent #12)</h3>
+                    <div class="result-row">
+                        <span class="result-label">Angle @ 60ft:</span>
+                        <span class="result-value" id="entryAngle">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Status:</span>
+                        <span id="entryStatus" style="font-size: 12px; color: #9eb8cc;"></span>
+                    </div>
+                </div>
+
+                <!-- BALL MOTION (Agent #12) -->
+                <div class="result-section">
+                    <h3>MOTION (Agent #12)</h3>
+                    <div class="result-row">
+                        <span class="result-label">Breakpoint Board:</span>
+                        <span class="result-value" id="breakpoint">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Total Hook:</span>
+                        <span class="result-value" id="hookAmount">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Lateral Velocity:</span>
+                        <span class="result-value" id="lateralVelocity">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Precession Rate:</span>
+                        <span class="result-value" id="precessionRate">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Spin Axis Tilt:</span>
+                        <span class="result-value" id="spinAxisAngle">—</span>
+                    </div>
+                </div>
+
+                <!-- BALL STATE (Agent #9) -->
+                <div class="result-section">
+                    <h3>BALL STATE (Agent #9)</h3>
+                    <div class="result-row">
+                        <span class="result-label">Initial Speed:</span>
+                        <span class="result-value" id="initialSpeed">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Final Speed:</span>
+                        <span class="result-value" id="finalSpeed">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Initial RPM:</span>
+                        <span class="result-value" id="initialRPM">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Final RPM:</span>
+                        <span class="result-value" id="finalRPM">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Energy Loss:</span>
+                        <span class="result-value" id="energyLoss">—</span>
+                    </div>
+                </div>
+
+                <!-- FLARE (Agent #10) -->
+                <div class="result-section">
+                    <h3>FLARE (Agent #10)</h3>
+                    <div class="result-row">
+                        <span class="result-label">Flare Distance:</span>
+                        <span class="result-value" id="flare">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Track Width:</span>
+                        <span class="result-value" id="trackWidth">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Revolutions:</span>
+                        <span class="result-value" id="revolutions">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Grit Condition:</span>
+                        <span class="result-value" id="gritCondition">—</span>
+                    </div>
+                </div>
+
+                <!-- SATURATION (Agent #11) -->
+                <div class="result-section">
+                    <h3>SATURATION (Agent #11)</h3>
+                    <div class="result-row">
+                        <span class="result-label">Initial Saturation:</span>
+                        <span class="result-value" id="saturationInitial">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Final Saturation:</span>
+                        <span class="result-value" id="saturation">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Oil Absorbed:</span>
+                        <span class="result-value" id="oilAbsorbed">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Friction (Initial):</span>
+                        <span class="result-value" id="frictionInitial">—</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">Friction (Final):</span>
+                        <span class="result-value" id="frictionFinal">—</span>
+                    </div>
+                </div>
+
+                <!-- STRIKE PROBABILITY -->
+                <div class="result-section">
+                    <h3>STRIKE PROBABILITY</h3>
+                    <div class="result-row" style="justify-content: center; margin-bottom: 0;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 28px; font-weight: 700; color: #00ff88; margin-bottom: 4px;">
+                                <span id="strikeChance">—</span>%
+                            </div>
+                            <span style="font-size: 11px; color: #7a8fa3;">Expected carry</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="noResults" style="text-align: center; color: #7a8fa3; margin-top: 40px; font-size: 13px;">
+                <p>Click SIMULATE to run physics engine</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+
+        // STATE
+        let state = {
+            selectedBall: 'jackal_ghost',
+            ballSpeed: 18.0,
+            ballRPM: 300,
+            oilPattern: 'house_shot',
+            oilCondition: 'fresh',
+            balls: {},
+            lastResult: null
+        };
+
+        // ===== INITIALIZATION =====
+        async function init() {
+            console.log('Initializing Boardwork 3D...');
+            try {
+                await loadBalls();
+                setupEventListeners();
+                renderBallSelector();
+                document.getElementById('loading').classList.remove('active');
+            } catch (error) {
+                console.error('Init error:', error);
+                showError('Failed to initialize simulator');
+            }
+        }
+
+        async function loadBalls() {
+            try {
+                const response = await fetch(`${API_URL}/balls`);
+                const data = await response.json();
+                if (data.success) {
+                    state.balls = data.balls;
+                    console.log(`Loaded ${data.count} balls`);
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (error) {
+                console.error('Error loading balls:', error);
+                showBallError('Failed to load ball database');
+            }
+        }
+
+        function renderBallSelector() {
+            const container = document.getElementById('ballSelectorList');
+            container.innerHTML = '';
+
+            const category = document.getElementById('ballCategory').value;
+            let balls = state.balls;
+
+            if (category) {
+                balls = balls.filter(b => b.category === category);
+            }
+
+            balls.forEach(ball => {
+                const option = document.createElement('div');
+                option.className = 'ball-option' + (ball.id === state.selectedBall ? ' selected' : '');
+                option.innerHTML = `
+                    <div class="ball-option-name">${ball.name}</div>
+                    <div class="ball-option-specs">
+                        Backend: ${ball.backend_rating} | Flare: ${ball.flare_potential}" | ${ball.cover_type}
+                    </div>
+                `;
+                option.onclick = () => selectBall(ball.id);
+                container.appendChild(option);
+            });
+        }
+
+        function selectBall(ballId) {
+            state.selectedBall = ballId;
+            renderBallSelector();
+            updateBallDisplay();
+        }
+
+        function updateBallDisplay() {
+            const ball = state.balls.find(b => b.id === state.selectedBall);
+            if (ball) {
+                const display = document.getElementById('ballInfoDisplay');
+                document.getElementById('ballDisplayName').textContent = ball.name;
+                document.getElementById('ballDisplaySpecs').innerHTML = `
+                    RG: ${ball.rg} | Diff: ${ball.differential.toFixed(3)} | Backend: ${ball.backend_rating}/10<br>
+                    Flare: ${ball.flare_potential}" | Weight: ${ball.weight_lbs} lbs | ${ball.cover_type}
+                `;
+                display.style.display = 'block';
+            }
+        }
+
+        function setupEventListeners() {
+            // Speed & RPM sliders
+            document.getElementById('ballSpeed').addEventListener('input', (e) => {
+                state.ballSpeed = parseFloat(e.target.value);
+                document.getElementById('speedValue').textContent = state.ballSpeed.toFixed(1);
+            });
+
+            document.getElementById('ballRPM').addEventListener('input', (e) => {
+                state.ballRPM = parseInt(e.target.value);
+                document.getElementById('rpmValue').textContent = state.ballRPM;
+            });
+
+            // Pattern & Condition
+            document.getElementById('oilPattern').addEventListener('change', (e) => {
+                state.oilPattern = e.target.value;
+            });
+
+            document.getElementById('oilCondition').addEventListener('change', (e) => {
+                state.oilCondition = e.target.value;
+            });
+
+            // Ball category filter
+            document.getElementById('ballCategory').addEventListener('change', () => {
+                renderBallSelector();
+            });
+
+            // Buttons
+            document.getElementById('simulateBtn').addEventListener('click', simulate);
+            document.getElementById('resetBtn').addEventListener('click', reset);
+        }
+
+        async function simulate() {
+            const btn = document.getElementById('simulateBtn');
+            btn.disabled = true;
+            btn.textContent = 'SIMULATING...';
+
+            try {
+                const response = await fetch(`${API_URL}/simulate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ball_id: state.selectedBall,
+                        ball_speed_mph: state.ballSpeed,
+                        ball_rpm: state.ballRPM,
+                        oil_pattern: state.oilPattern,
+                        oil_condition: state.oilCondition,
+                        axis_angle_deg: 45.0
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    state.lastResult = data;
+                    displayResults(data);
+                    drawLane(data);
+                } else {
+                    showError(data.error || 'Simulation failed');
+                }
+            } catch (error) {
+                console.error('Simulation error:', error);
+                showError('Network error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'SIMULATE';
+            }
+        }
+
+        function displayResults(data) {
+            const output = data.output;
+            const summary = output.summary || {};
+            const agent9 = output.agent_9 || {};
+            const agent10 = output.agent_10 || {};
+            const agent11 = output.agent_11 || {};
+            const agent12 = output.agent_12 || {};
+
+            // ===== AGENT #12: ENTRY ANGLE =====
+            const entryAngle = agent12.entry_angle_deg !== undefined ? agent12.entry_angle_deg : agent9.entry_angle_deg || 0;
+            let entryStatus = '';
+            const angle_diff = Math.abs(entryAngle - 6.0);
+            if (angle_diff <= 1) {
+                entryStatus = '<span class="status-indicator status-optimal"></span>Optimal ✓';
+            } else if (angle_diff <= 3) {
+                entryStatus = '<span class="status-indicator status-warning"></span>Fair';
+            } else {
+                entryStatus = '<span class="status-indicator status-poor"></span>Aggressive';
+            }
+            document.getElementById('entryAngle').textContent = entryAngle.toFixed(1) + '°';
+            document.getElementById('entryStatus').innerHTML = entryStatus;
+
+            // ===== AGENT #12: MOTION =====
+            const breakpointBoard = agent12.breakpoint_board !== undefined ? agent12.breakpoint_board : agent9.breakpoint_board || 20;
+            const hookAmount = agent12.hook_amount_boards !== undefined ? agent12.hook_amount_boards : summary.hook_amount_boards || 0;
+
+            document.getElementById('breakpoint').textContent = breakpointBoard.toFixed(1);
+            document.getElementById('hookAmount').textContent = hookAmount.toFixed(1);
+            document.getElementById('lateralVelocity').textContent = (agent12.lateral_velocity_ft_s || 0).toFixed(2) + ' ft/s';
+            document.getElementById('precessionRate').textContent = (agent12.precession_rate_deg_per_ft || 0).toFixed(3) + ' °/ft';
+            document.getElementById('spinAxisAngle').textContent = (agent12.spin_axis_angle_deg || 0).toFixed(1) + '°';
+
+            // ===== AGENT #9: BALL STATE =====
+            document.getElementById('initialSpeed').textContent = (agent9.initial_speed_mph || 0).toFixed(2) + ' mph';
+            document.getElementById('finalSpeed').textContent = (agent9.final_speed_mph || 0).toFixed(2) + ' mph';
+            document.getElementById('initialRPM').textContent = (agent9.initial_rpm || 0).toFixed(0);
+            document.getElementById('finalRPM').textContent = (agent9.final_rpm || 0).toFixed(0);
+            document.getElementById('energyLoss').textContent = (agent9.energy_lost_pct || 0).toFixed(1) + '%';
+
+            // ===== AGENT #10: FLARE =====
+            document.getElementById('flare').textContent = (agent10.flare_distance_inches || 0).toFixed(2) + '"';
+            document.getElementById('trackWidth').textContent = (agent10.track_width_inches || 0).toFixed(2) + '"';
+            document.getElementById('revolutions').textContent = (agent10.revolutions_total || 0).toFixed(1);
+            document.getElementById('gritCondition').textContent = agent10.grit_condition || 'N/A';
+
+            // ===== AGENT #11: SATURATION =====
+            document.getElementById('saturationInitial').textContent = (agent11.saturation_pct_initial || 0).toFixed(1) + '%';
+            document.getElementById('saturation').textContent = (agent11.saturation_pct_final || 0).toFixed(1) + '%';
+            document.getElementById('oilAbsorbed').textContent = (agent11.oil_absorbed_cc || 0).toFixed(2) + ' cc';
+            document.getElementById('frictionInitial').textContent = (agent11.friction_coefficient_initial || 0).toFixed(4);
+            document.getElementById('frictionFinal').textContent = (agent11.friction_coefficient_final || 0).toFixed(4);
+
+            // ===== STRIKE CHANCE =====
+            document.getElementById('strikeChance').textContent = Math.round(summary.strike_chance_pct || 0);
+
+            // Store full data for detailed view
+            state.lastResult = data;
+
+            document.getElementById('resultsContent').style.display = 'block';
+            document.getElementById('noResults').style.display = 'none';
+        }
+
+        function drawLane(data) {
+            const canvas = document.getElementById('laneCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Clear canvas
+            ctx.fillStyle = 'rgba(15, 20, 25, 0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const laneWidth = 300;  // pixels
+            const startX = (canvas.width - laneWidth) / 2;
+            const startY = 50;
+            const laneHeight = canvas.height - 100;
+            const pixelsPerFoot = laneHeight / 60;
+
+            // Draw oil heatmap (gradient)
+            const gradient = ctx.createLinearGradient(0, startY, 0, startY + laneHeight);
+            gradient.addColorStop(0, 'rgba(100, 150, 200, 0.4)');    // Fresh
+            gradient.addColorStop(0.5, 'rgba(150, 100, 200, 0.4)');  // Transition
+            gradient.addColorStop(1, 'rgba(200, 50, 50, 0.4)');      // Broken
+            ctx.fillStyle = gradient;
+            ctx.fillRect(startX, startY, laneWidth, laneHeight);
+
+            // Draw boards
+            ctx.strokeStyle = 'rgba(0, 212, 255, 0.2)';
+            ctx.lineWidth = 1;
+            for (let board = 0; board <= 40; board += 5) {
+                const x = startX + (board / 39) * laneWidth;
+                ctx.beginPath();
+                ctx.moveTo(x, startY);
+                ctx.lineTo(x, startY + laneHeight);
+                ctx.stroke();
+
+                if (board % 10 === 0) {
+                    ctx.fillStyle = 'rgba(0, 212, 255, 0.4)';
+                    ctx.font = '10px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(board, x, startY - 10);
+                }
+            }
+
+            // Draw trajectory
+            const trajectory = data.output.trajectory || [];
+            if (trajectory.length > 0) {
+                ctx.strokeStyle = 'rgba(0, 255, 136, 0.8)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+
+                trajectory.forEach((point, idx) => {
+                    const x = startX + ((point.board - 1) / 39) * laneWidth;
+                    const y = startY + (point.distance_ft / 60) * laneHeight;
+
+                    if (idx === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+            }
+
+            // Draw release point
+            const releaseX = startX + (20 / 39) * laneWidth;  // Board 20
+            const releaseY = startY - 20;
+            ctx.fillStyle = 'rgba(0, 212, 255, 1)';
+            ctx.beginPath();
+            ctx.arc(releaseX, releaseY, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw breakpoint
+            const breakpoint = data.output.breakpoint_board;
+            const bpX = startX + ((breakpoint - 1) / 39) * laneWidth;
+            const bpY = startY + (35 / 60) * laneHeight;  // Approximate
+            ctx.fillStyle = 'rgba(255, 200, 0, 0.8)';
+            ctx.beginPath();
+            ctx.arc(bpX, bpY, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw pin deck
+            ctx.strokeStyle = 'rgba(0, 200, 100, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY + laneHeight - 10);
+            ctx.lineTo(startX + laneWidth, startY + laneHeight - 10);
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(0, 200, 100, 0.3)';
+            ctx.font = '12px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('PIN DECK (60 ft)', canvas.width / 2, startY + laneHeight + 20);
+        }
+
+        function reset() {
+            document.getElementById('ballSpeed').value = 18;
+            document.getElementById('ballRPM').value = 300;
+            document.getElementById('ballCategory').value = '';
+            document.getElementById('oilPattern').value = 'house_shot';
+            document.getElementById('oilCondition').value = 'fresh';
+            document.getElementById('speedValue').textContent = '18.0';
+            document.getElementById('rpmValue').textContent = '300';
+            document.getElementById('resultsContent').style.display = 'none';
+            document.getElementById('noResults').style.display = 'block';
+
+            state.ballSpeed = 18.0;
+            state.ballRPM = 300;
+            state.oilPattern = 'house_shot';
+            state.oilCondition = 'fresh';
+
+            renderBallSelector();
+        }
+
+        function showError(msg) {
+            console.error('Error:', msg);
+            alert('Error: ' + msg);
+        }
+
+        function showBallError(msg) {
+            const errorDiv = document.getElementById('ballError');
+            errorDiv.textContent = msg;
+            errorDiv.style.display = 'block';
+        }
+
+        // Start app
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
