@@ -5,22 +5,40 @@ are next. See [`README.md`](README.md) for what's real vs placeholder in the
 physics pipeline, and [`lane-renderer/AGENT_MAPPING.md`](lane-renderer/AGENT_MAPPING.md)
 for the renderer's own seams.
 
+## Ball database (`balls_database.py`)
+
+- [x] Replaced with Motiv's real, current 24-ball catalog (scraped from
+      motivbowling.com + BowlerX/BowlersMart) — the original 38-ball version
+      was mostly fabricated (invented names that were never real products)
+- [x] 7-tier category taxonomy using Motiv's own wording: Heavy Oil,
+      Medium-Heavy Oil, Medium Oil, Light-Medium Oil, Light Oil, Entry Level,
+      Spare
+- [x] Per-weight RG/differential where Motiv publishes it (most balls: 12–16
+      lb; a few: 8–10 lb up to 16lb) via `specs_by_weight` / `specsAtWeight()`
+- [x] Motiv's own published Length/Backend/Hook indices (0–100 scale) and
+      `source_url` per ball
+- [ ] A handful of fields are lower-confidence or partial — see inline
+      comments in `balls_database.py` (Shadow Tank's coverType is an
+      approximation of Motiv's proprietary "MCP," a few balls only have
+      RG/diff confirmed at one weight, Sigma Tour Pearl's 14/15lb row is from
+      a secondary source)
+
 ## Arsenal Builder (`index.html`)
 
 - [x] Ball catalog (from `balls_database.py`, snapshotted inline) with add-to-bag
 - [x] Per-ball Benchmark / Spare flags, editable finish (Solid/Pearl/Hybrid
       Reactive, Urethane, Particle, Plastic) — stored in `localStorage`, this
       browser only
-- [x] RG, differential, hook potential (0–200, derived as `backendRating*20`)
-      shown per ball
-- [x] Arsenal shape chart — hook axis (backend rating ÷ 10) × length axis
-      (RG normalized), quadrant-labeled. This is a heuristic stand-in, not a
-      manufacturer-published ball motion chart — no length data exists in the
-      source DB, so it's inferred from RG.
+- [x] Weight picker per ball (options built from that model's real
+      `weightRangeLbs`), RG/diff shown at the selected weight (falls back to
+      the nearest weight Motiv actually published, never interpolated)
+- [x] Hook potential (0–200, `motivHook × 2` — a rescale of Motiv's own
+      published index, not an independent estimate)
+- [x] Arsenal shape chart — hook axis × length axis, both Motiv's own
+      published Length/Hook indices for the ball's standard weight (no longer
+      a derived heuristic, now real manufacturer data)
 - [ ] Drill layout assignment (layout sheet: pin, PAP, drill angles)
 - [ ] Positive Axis Point (PAP) capture per ball
-- [ ] Swap the heuristic shape axes for real manufacturer motion-chart data,
-      if that ever becomes available
 
 ## Bowler Profile (`index.html`)
 
@@ -33,9 +51,10 @@ for the renderer's own seams.
 
 ## Lane Renderer (`lane-renderer/index.html`)
 
-- [x] Ball dropdown from the ball database, showing RG / diff / hook
-      potential — **display only**, not wired into the sim (there's no sim to
-      wire into yet — see below)
+- [x] Ball dropdown from the ball database with a weight picker (per-model
+      real range), showing RG / diff at that weight / hook potential —
+      **display only**, not wired into the sim (there's no sim to wire into
+      yet — see below)
 - [x] Fit-to-width zoom control (CSS-scales the canvas, so aspect ratio is
       preserved automatically; mouse/drag coordinates adjusted for the scale)
 - [x] Placeholder panels for a ball flare map and a vertical ball oil
