@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Boardwork — Two-Lane Renderer</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#101010;color:#c8c8c8;font:13px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+  #bar{position:sticky;top:0;z-index:10;background:#181818;border-bottom:1px solid #2c2c2c;
+       padding:9px 14px;display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+  .grp{display:flex;flex-direction:column;gap:4px;min-width:132px}
+  .grp>label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6f6f6f}
+  .val{color:#e8a34a;font-variant-numeric:tabular-nums}
+  select,input[type=range]{width:100%}
+  select{background:#232323;color:#ddd;border:1px solid #3a3a3a;padding:4px;border-radius:3px}
+  .toggles label{text-transform:none;letter-spacing:0;color:#c8c8c8;font-size:11px;
+                 display:flex;gap:6px;align-items:center;cursor:pointer}
+  canvas#profile{background:#141414;border:1px solid #2c2c2c;border-radius:3px}
+  #sheet{font-size:11px;color:#8a8a8a;font-variant-numeric:tabular-nums;line-height:1.5;min-width:180px}
+  #sheet b{color:#d6d6d6;font-weight:600}
+  .ok{color:#5ddc8c} .warn{color:#e8a34a}
+  #readout{font-size:11px;color:#8a8a8a;font-variant-numeric:tabular-nums;min-width:250px;line-height:1.55}
+  #scroller{width:100vw;overflow:auto}
+  canvas#lane{display:block;background:#0a0a0a}
+  .seg{display:flex}
+  .seg button{flex:1;background:#232323;color:#999;border:1px solid #3a3a3a;padding:4px 0;
+              cursor:pointer;font-size:11px}
+  .seg button.on{background:#e8a34a;color:#111;border-color:#e8a34a}
+  .seg button.l1.on{background:#5aa9ff;border-color:#5aa9ff}
+  .seg button.l2.on{background:#c97bff;border-color:#c97bff}
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <div class="grp" style="min-width:150px">
+    <label>Editing</label>
+    <div class="seg"><button id="L1" class="l1 on">Lane 1</button><button id="L2" class="l2">Lane 2</button></div>
+    <label style="text-transform:none;letter-spacing:0;color:#c8c8c8;font-size:11px;display:flex;gap:6px;align-items:center;cursor:pointer">
+      <input type="checkbox" id="link"> link both lanes</label>
+  </div>
+  <div class="grp" style="min-width:110px">
+    <label>Hand</label>
+    <div class="seg"><button id="rh" class="on">RH</button><button id="lh">LH</button></div>
+    <div id="pocketNote" style="font-size:10px;color:#5f5f5f"></div>
+  </div>
+  <div class="grp" style="min-width:165px">
+    <label>Oil pattern</label>
+    <select id="preset"></select>
+  </div>
+  <div id="sheet"></div>
+  <div class="grp">
+    <label>Buffer carry <span class="val" id="bufV"></span></label>
+    <input type="range" id="buf" min="0" max="0.8" step="0.05">
+    <label>Shots thrown <span class="val" id="shotV"></span></label>
+    <input type="range" id="shot" min="0" max="60" step="1">
+    <label>Breakpoint bd <span class="val" id="bpV"></span></label>
+    <input type="range" id="bp" min="3" max="15" step="0.5">
+    <label>Cross-section <span class="val" id="xsV"></span></label>
+    <input type="range" id="xs" min="0" max="60" step="0.5">
+  </div>
+  <div class="grp toggles" style="min-width:140px">
+    <label style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6f6f6f">Layers</label>
+    <label><input type="checkbox" id="tOil" checked> Oil matrix</label>
+    <label><input type="checkbox" id="tPath" checked> Ball path</label>
+    <label><input type="checkbox" id="tEntry" checked> 6&deg; entry</label>
+    <label><input type="checkbox" id="tHit" checked> Collision</label>
+  </div>
+  <div class="grp" style="min-width:300px">
+    <label>&micro;L per board <span id="profLane" style="text-transform:none;color:#5f5f5f"></span></label>
+    <canvas id="profile" width="300" height="66"></canvas>
+  </div>
+  <div id="readout"></div>
+</div>
+
+<div id="scroller"><canvas id="lane"></canvas></div>
+
+<script>
+var PATTERNS = {"Bear 38":{"src":"loads","sheet":"PDF","distance":38.0,"volume":29.58,"ratio":"2.01:1","dropBrush":34.0,"fwdVol":16.75,"revVol":12.83,"rows":[[2,38,1,50,0.0,0.5],[3,38,1,50,0.0,2.0],[4,37,2,50,2.0,6.0],[5,36,1,50,6.0,8.0],[5,34,2,50,8.0,13.0],[6,32,2,50,13.0,18.0],[7,30,2,50,18.0,23.0],[6,31,2,45,24.0,30.0],[5,33,3,45,16.0,24.0],[5,35,1,45,14.0,16.0],[4,37,1,45,11.0,14.0],[3,38,1,50,9.0,11.0],[2,38,1,50,7.0,9.0]]},"Chameleon 39":{"src":"loads","sheet":"PDF","distance":39.0,"volume":32.935,"ratio":"2.46:1","dropBrush":35.0,"fwdVol":15.32,"revVol":17.615,"rows":[[4,36,6,40,0.0,10.0],[7,30,2,40,10.0,14.0],[4,36,3,40,14.0,21.0],[9,27,2,40,21.0,26.0],[11,25,2,50,28.0,33.0],[9,27,3,55,20.0,28.0],[8,30,1,55,18.0,20.0],[7,33,3,55,13.0,18.0],[4,36,4,55,5.0,13.0]]},"Cheetah 35":{"src":"loads","sheet":"PDF","distance":35.0,"volume":28.785,"ratio":"1.56:1","dropBrush":32.0,"fwdVol":13.185,"revVol":15.6,"rows":[[4,38,1,45,0.0,0.5],[4,37,2,45,0.0,5.0],[2,38,2,45,5.0,10.0],[6,34,4,45,10.0,20.0],[7,32,2,50,24.0,30.0],[5,35,3,50,16.0,24.0],[2,38,1,50,14.0,16.0],[8,32,1,50,11.0,14.0],[3,37,3,50,5.0,11.0]]},"Dragon 47":{"src":"loads","sheet":"PDF","distance":47.0,"volume":26.4,"ratio":"2.65:1","dropBrush":40.0,"fwdVol":12.59,"revVol":13.81,"rows":[[10,28,2,55,0.0,2.0],[2,6,1,55,2.0,4.0],[32,38,1,55,4.0,6.0],[10,28,2,55,6.0,10.0],[2,6,1,55,10.0,12.0],[32,38,1,55,12.0,14.0],[10,28,2,55,14.0,18.0],[2,6,1,55,18.0,20.0],[32,38,1,55,20.0,22.0],[10,28,2,55,22.0,27.0],[2,6,1,45,27.0,29.0],[32,38,1,45,29.0,32.0],[10,28,2,45,32.0,37.0],[10,28,2,55,30.0,36.0],[32,38,1,55,27.0,30.0],[2,6,1,55,25.0,27.0],[10,28,2,55,20.0,25.0],[9,29,2,55,15.0,20.0],[2,38,4,45,7.0,15.0]]},"Scorpion 43":{"src":"loads","sheet":"PDF","distance":43.0,"volume":27.06,"ratio":"3.10:1","dropBrush":41.0,"fwdVol":13.145,"revVol":13.915,"rows":[[7,31,2,55,0.0,2.0],[2,4,1,55,2.0,4.0],[34,38,1,55,4.0,6.0],[7,31,2,55,6.0,10.0],[2,4,1,55,10.0,12.0],[34,38,1,55,12.0,14.0],[8,30,2,55,14.0,19.0],[2,4,1,55,19.0,21.0],[34,38,1,55,21.0,24.0],[9,29,2,55,24.0,29.0],[2,4,1,55,29.0,31.0],[34,38,1,55,31.0,34.0],[10,28,1,55,34.0,36.0],[9,29,2,55,31.0,36.0],[34,38,1,55,28.0,31.0],[2,4,1,55,26.0,28.0],[8,30,2,55,21.0,26.0],[34,38,1,55,18.0,21.0],[2,4,1,55,16.0,18.0],[2,38,1,55,14.0,16.0],[7,31,3,55,8.0,14.0],[2,38,1,55,6.0,8.0]]},"Shark 48":{"src":"loads","sheet":"PDF","distance":48.0,"volume":32.435,"ratio":"2.51:1","dropBrush":40.0,"fwdVol":18.85,"revVol":13.585,"rows":[[7,33,2,50,0.0,2.0],[2,38,3,50,2.0,8.0],[15,25,2,50,8.0,12.0],[2,38,3,50,12.0,19.0],[12,30,3,50,19.0,27.0],[15,25,2,50,27.0,32.0],[15,25,3,40,29.0,38.0],[11,29,3,45,21.0,29.0],[9,31,2,50,16.0,21.0],[2,38,2,50,11.0,16.0],[2,38,2,50,7.0,11.0]]},"Viper 37":{"src":"loads","sheet":"PDF","distance":37.0,"volume":25.555,"ratio":"2.65:1","dropBrush":34.0,"fwdVol":9.4,"revVol":16.155,"rows":[[6,34,2,40,0.0,3.0],[4,38,2,40,3.0,8.0],[8,30,3,40,8.0,15.0],[10,28,2,40,15.0,20.0],[9,31,3,45,23.0,31.0],[7,33,3,45,16.0,23.0],[6,35,1,45,14.0,16.0],[5,37,1,45,12.0,14.0],[4,38,1,45,10.0,12.0],[2,38,3,45,4.0,10.0]]},"Regional 37":{"src":"loads","sheet":"PDF","distance":37,"volume":32.65,"ratio":"3.08:1","dropBrush":30,"fwdVol":18.65,"revVol":14.0,"rows":[[2,38,3,50,0,4],[6,38,1,50,4,6],[7,33,3,50,6,12],[9,36,2,50,12,16],[10,29,3,50,16,23],[12,27,2,50,23,28],[11,29,2,50,23,29],[8,31,2,50,18,23],[7,33,2,50,13,18],[6,34,1,50,11,13],[2,38,3,50,5,11]]},"Badger 50":{"src":"loads","sheet":"TXT","distance":50,"volume":35.71,"ratio":null,"dropBrush":null,"fwdVol":null,"revVol":null,"rows":[[2,38,3,50,0.0,3.9],[9,31,3,45,3.9,9.8],[2,38,3,50,9.8,17.4],[12,29,3,50,17.4,25.0],[14,27,2,50,25.0,30.1],[13,25,3,45,22.1,29.7],[11,28,3,50,14.5,22.1],[10,30,3,50,10.6,14.5],[7,33,2,50,8.7,10.6],[5,35,1,50,2.8,8.7],[2,38,3,50,0.0,2.8]],"note":"machine file only - volume derived from loads, not sheet-verified"},"Wolf 34":{"src":"zones","sheet":"TSV","distance":34.0,"volume":31.785,"ratio":null,"dropBrush":null,"fwdVol":null,"revVol":null,"boards":[39,38,37,36,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"zoneEnd":[5.0,8.0,14.0,18.0,23.0,28.0,34.0],"zoneVol":[7.18862,4.25281,8.27174,4.83042,4.46826,2.77275,0.0],"zoneUnits":[[0.0,35.0,55.0,94.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,82.0,43.0,21.0,0.0],[0.0,31.0,47.0,79.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,70.0,37.0,18.0,0.0],[0.0,25.0,39.0,65.0,86.0,86.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,86.0,57.0,30.0,15.0,0.0],[0.0,20.0,31.0,51.0,69.0,69.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,69.0,45.0,24.0,11.0,0.0],[0.0,14.0,22.0,37.0,51.0,51.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,51.0,33.0,17.0,8.0,0.0],[0.0,9.0,14.0,23.0,31.0,31.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,31.0,20.0,11.0,5.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]]},"Bat 37":{"src":"loads","sheet":"PDF","distance":37.0,"volume":25.2,"ratio":"2.81:1","dropBrush":29.0,"fwdVol":12.85,"revVol":12.35,"rows":[[2,38,1,50,0.0,0.5],[4,36,1,50,0.0,2.0],[6,34,3,50,2.0,8.0],[7,33,2,50,8.0,13.0],[9,31,2,50,13.0,18.0],[10,30,2,50,22.0,28.0],[9,31,2,50,17.0,22.0],[8,32,1,50,14.0,17.0],[7,33,1,50,12.0,14.0],[4,36,1,50,10.0,12.0],[2,38,2,50,6.0,10.0]]}};
+
+(function () {
+  "use strict";
+
+  var BOARD_IN=1.0641, LANE_IN=41.5, GAP_IN=18.5;
+  var APPROACH_FT=15, END_FT=64, DECK_FT=59.5;
+  var PX_W=9.15, LANE_W=LANE_IN*PX_W, GAP=GAP_IN*PX_W, MARGIN=30;
+  var PIN_BELLY_R_IN=2.375, PIN_SPOT_R_IN=1.125, BALL_R_IN=4.25;
+  var ENTRY_DEG=6, SLOPE_BD_FT=12*Math.tan(ENTRY_DEG*Math.PI/180)/BOARD_IN;
+  var MAT_IN=Math.round(DECK_FT*12);
+
+  var ZONES=[{a:-APPROACH_FT,b:0,s:1.8},{a:0,b:DECK_FT,s:3.2},{a:DECK_FT,b:END_FT,s:PX_W}];
+  (function(){var x=MARGIN;ZONES.forEach(function(z){z.x0=x;x+=(z.b-z.a)*12*z.s;z.x1=x;});})();
+  var W=ZONES[ZONES.length-1].x1+MARGIN;
+  var LANE_Y=[MARGIN, MARGIN+LANE_W+GAP];
+  var H=LANE_Y[1]+LANE_W+MARGIN+6;
+
+  function ftToX(ft){for(var i=0;i<ZONES.length;i++){var z=ZONES[i];
+    if(ft<=z.b||i===ZONES.length-1)return z.x0+(ft-z.a)*12*z.s;}}
+  function xToFt(x){for(var i=0;i<ZONES.length;i++){var z=ZONES[i];
+    if(x<=z.x1||i===ZONES.length-1)return z.a+(x-z.x0)/(12*z.s);}}
+  function boardToY(ly,b){return ly+LANE_W-(b-0.5)*BOARD_IN*PX_W;}
+  function yToBoard(ly,y){return (ly+LANE_W-y)/(BOARD_IN*PX_W)+0.5;}
+
+  var ARROWS=[{board:5,ft:12},{board:10,ft:13+4/12},{board:15,ft:14+8/12},{board:20,ft:16},
+              {board:25,ft:14+8/12},{board:30,ft:13+4/12},{board:35,ft:12}];
+  var RANGE=[{boards:[15,25],a:34,b:37},{boards:[10,30],a:40,b:43}];
+  var DOTS=[5,10,15,20,25,30,35];
+  var PINS=[{n:1,board:20.00,ft:60.000},
+    {n:3,board:14.36,ft:60.866},{n:2,board:25.64,ft:60.866},
+    {n:6,board:8.72,ft:61.732},{n:5,board:20.00,ft:61.732},{n:4,board:31.28,ft:61.732},
+    {n:10,board:3.08,ft:62.598},{n:9,board:14.36,ft:62.598},
+    {n:8,board:25.64,ft:62.598},{n:7,board:36.92,ft:62.598}];
+
+  var KEYS=Object.keys(PATTERNS).sort();
+  // Each lane carries its own pattern, wear state and breakpoint - a league pair
+  // transitions independently, and the two lanes are often not even the same
+  // pattern in practice.
+  var lanes=[
+    {pattern:KEYS.indexOf('Regional 37')>=0?'Regional 37':KEYS[0], shots:0, bp:6, buffer:0.45,
+     mat:null, meta:null, off:null},
+    {pattern:KEYS.indexOf('Cheetah 35')>=0?'Cheetah 35':KEYS[0], shots:0, bp:6, buffer:0.45,
+     mat:null, meta:null, off:null}
+  ];
+  var sel=0, link=false;
+  var g={rh:true, oil:true, path:true, entry:true, hit:true, xs:20};
+
+  function pocketBoard(){return g.rh?17.5:22.5;}
+  function breakBoard(L){return g.rh?L.bp:40-L.bp;}
+
+  var BREAK_FT=42;
+  function pathBoardAt(L,ft){
+    var lay=20, bb=breakBoard(L), pk=pocketBoard();
+    if(ft<=0)return lay;
+    if(ft<=BREAK_FT)return lay+(bb-lay)*(ft/BREAK_FT);
+    var t=(ft-BREAK_FT)/(60-BREAK_FT);
+    var m1=SLOPE_BD_FT*(60-BREAK_FT)*(g.rh?1:-1);
+    return (2*t*t*t-3*t*t+1)*bb+(-2*t*t*t+3*t*t)*pk+(t*t*t-t*t)*m1;
+  }
+
+  // ---- build the uL matrix from whichever backend the pattern uses ----
+  function buildMatrix(key, buffer){
+    var P=PATTERNS[key], m=[], b, i, z;
+    for(b=0;b<=39;b++) m[b]=new Float64Array(MAT_IN);
+    if(P.src==='loads'){
+      P.rows.forEach(function(r){
+        var b0=r[0],b1=r[1],loads=r[2],mics=r[3],d0=r[4],d1=r[5];
+        if(loads===0||d1<=d0) return;
+        var per=loads*mics/((d1-d0)*12);
+        var i0=Math.round(d0*12), i1=Math.min(MAT_IN,Math.round(d1*12));
+        for(b=b0;b<=b1;b++) for(i=i0;i<i1;i++) m[b][i]+=per;
+      });
+    } else {
+      var prev=0;
+      for(z=0;z<P.zoneEnd.length && z<P.zoneUnits.length;z++){
+        var u=P.zoneUnits[z], s=0, k;
+        for(k=0;k<u.length;k++) s+=u[k];
+        var vol=P.zoneVol[z]*1000;
+        var i0=Math.round(prev*12), i1=Math.min(MAT_IN,Math.round(P.zoneEnd[z]*12));
+        if(s>0 && i1>i0){
+          for(k=0;k<P.boards.length;k++){
+            var per=vol*u[k]/s/(i1-i0), bb=P.boards[k];
+            for(i=i0;i<i1;i++) m[bb][i]+=per;
+          }
+        }
+        prev=P.zoneEnd[z];
+      }
+    }
+    // Buffer carry: brush drags oil forward past the last injected load. MODELLED,
+    // not on the sheet - injection often stops well short of the stated distance.
+    if(buffer>0){
+      var kk=0.016, FROM=18*12, endI=Math.min(MAT_IN-1,Math.round(P.distance*12));
+      for(b=1;b<=39;b++){
+        var carry=0;
+        for(i=FROM;i<MAT_IN;i++){
+          var pick=m[b][i]*buffer; m[b][i]-=pick; carry+=pick;
+          var drop=carry*kk; carry-=drop; m[b][i]+=drop;
+          if(i===endI){ m[b][i]+=carry; carry=0; }
+        }
+        if(carry>0) m[b][endI]+=carry;
+      }
+    }
+    return m;
+  }
+
+  var TAKE=0.06,F_ABS=0.15,F_LAT=0.30,F_DOWN=0.55,TRACK_HALF_BD=1.5,CARRY_DECAY=0.004;
+  function applyShots(L,m,shots){
+    var totAbs=0,totOff=0;
+    for(var s=0;s<shots;s++){
+      var carry=0;
+      for(var i=0;i<MAT_IN;i++){
+        var bc=pathBoardAt(L,(i+0.5)/12);
+        var lo=Math.max(1,Math.round(bc-TRACK_HALF_BD)),hi=Math.min(39,Math.round(bc+TRACK_HALF_BD));
+        var wid=hi-lo+1,taken=0,b;
+        for(b=lo;b<=hi;b++){var t=m[b][i]*TAKE;m[b][i]-=t;taken+=t;}
+        totAbs+=taken*F_ABS;
+        var lat=taken*F_LAT/2;
+        if(lo-1>=1)m[lo-1][i]+=lat; else totOff+=lat;
+        if(hi+1<=39)m[hi+1][i]+=lat; else totOff+=lat;
+        carry+=taken*F_DOWN;
+        var drop=carry*CARRY_DECAY; carry-=drop;
+        for(b=lo;b<=hi;b++)m[b][i]+=drop/wid;
+      }
+      totOff+=carry;
+    }
+    return {absorbed:totAbs,offEnd:totOff};
+  }
+
+  function rebuildLane(li){
+    var L=lanes[li];
+    var m=buildMatrix(L.pattern,L.buffer);
+    var fresh=0,b,i;
+    for(b=1;b<=39;b++) for(i=0;i<MAT_IN;i++) fresh+=m[b][i];
+    var dep=applyShots(L,m,L.shots);
+    var boardTotal=[],max=0,maxBoard=0,tot=0;
+    for(b=1;b<=39;b++){
+      var s=0;
+      for(i=0;i<MAT_IN;i++){var v=m[b][i];s+=v;if(v>max)max=v;}
+      boardTotal[b]=s;tot+=s;if(s>maxBoard)maxBoard=s;
+    }
+    L.mat=m;
+    L.meta={boardTotal:boardTotal,max:max,maxBoard:maxBoard,total:tot,fresh:fresh,
+            absorbed:dep.absorbed,offEnd:dep.offEnd};
+    if(!L.off){ L.off=document.createElement('canvas'); L.off.width=MAT_IN; L.off.height=39; }
+    var oc=L.off.getContext('2d');
+    var img=oc.createImageData(MAT_IN,39),d=img.data,mx=max||1;
+    for(b=1;b<=39;b++){
+      var row=39-b;
+      for(i=0;i<MAT_IN;i++){
+        var t=m[b][i]/mx; if(t>1)t=1;
+        var p=(row*MAT_IN+i)*4;
+        d[p]=70;d[p+1]=150;d[p+2]=255;
+        d[p+3]=t>0?Math.round(255*(0.06+0.62*t)):0;
+      }
+    }
+    oc.putImageData(img,0,0);
+  }
+
+  var canvas=document.getElementById('lane'),ctx=canvas.getContext('2d');
+  canvas.width=W;canvas.height=H;
+
+  function drawOil(li){
+    var L=lanes[li],ly=LANE_Y[li];
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(L.off,0,0,MAT_IN,39,ftToX(0),ly,ftToX(DECK_FT)-ftToX(0),LANE_W);
+    ctx.imageSmoothingEnabled=true;
+    var dist=PATTERNS[L.pattern].distance;
+    ctx.strokeStyle='rgba(90,170,255,0.8)';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
+    ctx.beginPath();ctx.moveTo(ftToX(dist),ly);ctx.lineTo(ftToX(dist),ly+LANE_W);ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  function drawPath(li){
+    var L=lanes[li],ly=LANE_Y[li];
+    ctx.strokeStyle='rgba(255,190,70,0.9)';ctx.lineWidth=2;ctx.beginPath();
+    for(var ft=0;ft<=60;ft+=0.25){
+      var x=ftToX(ft),y=boardToY(ly,pathBoardAt(L,ft));
+      if(ft===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+    ctx.beginPath();ctx.arc(ftToX(BREAK_FT),boardToY(ly,breakBoard(L)),4,0,Math.PI*2);
+    ctx.fillStyle='#ffd36b';ctx.fill();
+  }
+  function drawEntry(li){
+    var ly=LANE_Y[li],pk=pocketBoard(),back=10,dir=g.rh?-1:1;
+    var b0=pk+dir*back*SLOPE_BD_FT;
+    var x0=ftToX(60-back),y0=boardToY(ly,b0),x1=ftToX(60),y1=boardToY(ly,pk);
+    var half=BALL_R_IN/BOARD_IN;
+    ctx.fillStyle='rgba(90,220,140,0.10)';ctx.beginPath();
+    ctx.moveTo(x0,boardToY(ly,b0+half));ctx.lineTo(x1,boardToY(ly,pk+half));
+    ctx.lineTo(x1,boardToY(ly,pk-half));ctx.lineTo(x0,boardToY(ly,b0-half));
+    ctx.closePath();ctx.fill();
+    ctx.strokeStyle='#5ddc8c';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
+    ctx.strokeStyle='rgba(93,220,140,0.5)';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.moveTo(ftToX(0),y1);ctx.lineTo(ftToX(60),y1);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#5ddc8c';ctx.font='11px sans-serif';
+    ctx.textAlign='right';ctx.textBaseline='bottom';
+    ctx.fillText(pk+' bd @ 6\u00B0 ('+(g.rh?'RH':'LH')+')',ftToX(59.4),y1-6);
+  }
+  function drawCollision(li){
+    var ly=LANE_Y[li],pk=pocketBoard(),x=ftToX(60),y=boardToY(ly,pk);
+    ctx.beginPath();ctx.arc(x,y,BALL_R_IN*PX_W,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,190,70,0.18)';ctx.fill();
+    ctx.strokeStyle='rgba(255,190,70,0.85)';ctx.lineWidth=1.5;ctx.stroke();
+    (g.rh?[1,3]:[1,2]).forEach(function(num){
+      var p=PINS.filter(function(q){return q.n===num;})[0];
+      ctx.beginPath();ctx.arc(ftToX(p.ft),boardToY(ly,p.board),PIN_BELLY_R_IN*PX_W,0,Math.PI*2);
+      ctx.strokeStyle='#ffbe46';ctx.lineWidth=2;ctx.stroke();
+    });
+  }
+  function drawPins(li){
+    var ly=LANE_Y[li];
+    PINS.forEach(function(p){
+      var x=ftToX(p.ft),y=boardToY(ly,p.board);
+      ctx.beginPath();ctx.arc(x,y,PIN_BELLY_R_IN*PX_W,0,Math.PI*2);
+      ctx.fillStyle='rgba(235,235,235,0.15)';ctx.fill();
+      ctx.strokeStyle='rgba(220,220,220,0.45)';ctx.lineWidth=1;ctx.stroke();
+      ctx.beginPath();ctx.arc(x,y,PIN_SPOT_R_IN*PX_W,0,Math.PI*2);
+      ctx.fillStyle='#e8e8e8';ctx.fill();
+      ctx.fillStyle='#000';ctx.font='bold 10px sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(p.n,x,y);
+    });
+  }
+  function drawLane(li){
+    var L=lanes[li],ly=LANE_Y[li];
+    ctx.fillStyle='#191919';ctx.fillRect(MARGIN,ly,W-2*MARGIN,LANE_W);
+    ctx.fillStyle='#141414';ctx.fillRect(MARGIN,ly,ftToX(0)-MARGIN,LANE_W);
+    var cellH=BOARD_IN*PX_W;
+    for(var b=1;b<=39;b++) if(b%2===0){
+      ctx.fillStyle='rgba(255,255,255,0.03)';
+      ctx.fillRect(MARGIN,boardToY(ly,b)-cellH/2,W-2*MARGIN,cellH);
+    }
+    if(g.oil)drawOil(li);
+    ctx.fillStyle='#4a4a4a';ctx.font='9px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='top';
+    for(var ft=0;ft<=60;ft+=5){
+      var x=ftToX(ft);
+      ctx.strokeStyle='rgba(255,255,255,0.07)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(x,ly);ctx.lineTo(x,ly+LANE_W);ctx.stroke();
+      ctx.fillText(ft,x,ly+LANE_W+12);
+    }
+    ctx.strokeStyle='rgba(255,255,255,0.10)';ctx.lineWidth=1;
+    for(var b2=5;b2<=35;b2+=5){var yy=boardToY(ly,b2);
+      ctx.beginPath();ctx.moveTo(MARGIN,yy);ctx.lineTo(W-MARGIN,yy);ctx.stroke();}
+    ctx.fillStyle='#000';
+    ctx.fillRect(ftToX(0),ly-10,W-MARGIN-ftToX(0),10);
+    ctx.fillRect(ftToX(0),ly+LANE_W,W-MARGIN-ftToX(0),10);
+    ctx.fillStyle='rgba(255,255,255,0.16)';
+    RANGE.forEach(function(r){r.boards.forEach(function(b){
+      ctx.fillRect(ftToX(r.a),boardToY(ly,b)-cellH/2,ftToX(r.b)-ftToX(r.a),cellH);});});
+    ctx.strokeStyle='#e06020';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(ftToX(0),ly);ctx.lineTo(ftToX(0),ly+LANE_W);ctx.stroke();
+    ctx.fillStyle='#777';
+    DOTS.forEach(function(b){ctx.beginPath();
+      ctx.arc(ftToX(-4/12),boardToY(ly,b),3,0,Math.PI*2);ctx.fill();});
+    ctx.fillStyle='#8a8a8a';
+    ARROWS.forEach(function(a){
+      var x=ftToX(a.ft),y=boardToY(ly,a.board),Ln=11,w=5;
+      ctx.beginPath();ctx.moveTo(x+Ln,y);ctx.lineTo(x-Ln,y-w);ctx.lineTo(x-Ln,y+w);
+      ctx.closePath();ctx.fill();
+    });
+    ctx.strokeStyle='#555';ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.moveTo(ftToX(60),ly);ctx.lineTo(ftToX(60),ly+LANE_W);ctx.stroke();
+    ctx.setLineDash([]);
+    // cross-section station
+    var xsx=ftToX(g.xs);
+    ctx.strokeStyle='#ffffff';ctx.lineWidth=1.5;
+    ctx.globalAlpha=0.85;
+    ctx.beginPath();ctx.moveTo(xsx,ly-10);ctx.lineTo(xsx,ly+LANE_W+10);ctx.stroke();
+    ctx.globalAlpha=1;
+    ctx.fillStyle='#ffffff';ctx.beginPath();
+    ctx.moveTo(xsx,ly-10);ctx.lineTo(xsx-5,ly-18);ctx.lineTo(xsx+5,ly-18);
+    ctx.closePath();ctx.fill();
+    if(g.path)drawPath(li);
+    if(g.entry)drawEntry(li);
+    drawPins(li);
+    if(g.hit)drawCollision(li);
+    // lane label + selection highlight
+    ctx.fillStyle=li===0?'#5aa9ff':'#c97bff';
+    ctx.font='bold 11px sans-serif';ctx.textAlign='left';ctx.textBaseline='top';
+    ctx.fillText('LANE '+(li+1)+'  \u00B7  '+L.pattern+
+      (L.shots?'  \u00B7  '+L.shots+' shots':''), MARGIN+4, ly+4);
+    if(li===sel){
+      ctx.strokeStyle=li===0?'rgba(90,169,255,0.75)':'rgba(201,123,255,0.75)';
+      ctx.lineWidth=2;ctx.strokeRect(MARGIN-1,ly-11,W-2*MARGIN+2,LANE_W+22);
+    }
+  }
+
+  function drawAll(){
+    rebuildLane(0); rebuildLane(1);
+    ctx.fillStyle='#0a0a0a';ctx.fillRect(0,0,W,H);
+    drawLane(0);drawLane(1);
+    drawProfile();drawSheet();
+  }
+
+  var pc=document.getElementById('profile'),pctx=pc.getContext('2d');
+  function drawProfile(){
+    var L=lanes[sel],meta=L.meta;
+    var ii=Math.min(MAT_IN-1,Math.max(0,Math.round(g.xs*12)));
+    var peak=0,b;
+    for(b=1;b<=39;b++) if(L.mat[b][ii]>peak) peak=L.mat[b][ii];
+    document.getElementById('profLane').textContent=
+      '— lane '+(sel+1)+' @ '+g.xs.toFixed(1)+' ft, peak '+peak.toFixed(2)+' \u00B5L';
+    pctx.clearRect(0,0,pc.width,pc.height);
+    var barW=pc.width/39,base=pc.height-11;
+    // scale to the lane's global max cell so bars stay comparable while sliding
+    var mb=meta.max||1;
+    var col=sel===0?'90,169,255':'201,123,255';
+    for(b=1;b<=39;b++){
+      var h=(L.mat[b][ii]/mb)*(base-4);
+      pctx.fillStyle='rgba('+col+','+(0.35+0.6*(h/(base-4)||0)).toFixed(3)+')';
+      pctx.fillRect((39-b)*barW+0.5,base-h,barW-1,h);
+    }
+    var pk=pocketBoard();
+    pctx.strokeStyle='rgba(93,220,140,0.7)';pctx.lineWidth=1;
+    pctx.beginPath();pctx.moveTo((39-pk)*barW,0);pctx.lineTo((39-pk)*barW,base);pctx.stroke();
+    pctx.strokeStyle='#3a3a3a';
+    pctx.beginPath();pctx.moveTo(0,base);pctx.lineTo(pc.width,base);pctx.stroke();
+    pctx.fillStyle='#6f6f6f';pctx.font='9px sans-serif';pctx.textAlign='center';
+    [39,30,20,10,1].forEach(function(b){pctx.fillText(b,(39-b+0.5)*barW,pc.height-1);});
+  }
+
+  var sheetEl=document.getElementById('sheet');
+  function drawSheet(){
+    var L=lanes[sel],P=PATTERNS[L.pattern],meta=L.meta;
+    var recon=(meta.fresh/1000);
+    var match=Math.abs(recon-P.volume)<0.03;
+    var src=P.src==='loads'?(P.rows.length+' load rows'):(P.zoneUnits.length+' zones \u00D7 39 bd');
+    sheetEl.innerHTML=
+      '<b>'+P.distance+' ft</b>'+(P.ratio?' &nbsp; ratio <b>'+P.ratio+'</b>':'')+'<br>'+
+      'sheet volume <b>'+P.volume.toFixed(2)+' mL</b><br>'+
+      'rebuilt: <span class="'+(match?'ok':'warn')+'">'+recon.toFixed(2)+' mL '+
+        (match?'&#10003;':'&#10007;')+'</span> &nbsp;<span style="color:#5f5f5f">'+src+'</span><br>'+
+      (P.dropBrush?'drop brush '+P.dropBrush+' ft &nbsp; ':'')+
+      '<span style="color:#5f5f5f">'+P.sheet+'</span>'+
+      (P.note?'<br><span class="warn" style="font-size:10px">'+P.note+'</span>':'');
+  }
+
+  var readout=document.getElementById('readout');
+  function setReadout(extra,li){
+    var L=lanes[li===undefined?sel:li],meta=L.meta;
+    var html='<b style="color:'+((li===undefined?sel:li)===0?'#5aa9ff':'#c97bff')+'">Lane '+
+             ((li===undefined?sel:li)+1)+'</b> on lane <b style="color:#d6d6d6">'+
+             (meta.total/1000).toFixed(3)+' mL</b>';
+    if(L.shots>0)
+      html+=' &nbsp;|&nbsp; into ball '+(meta.absorbed/1000).toFixed(3)+
+            ' &nbsp;|&nbsp; off end '+(meta.offEnd/1000).toFixed(3)+' mL';
+    html+='<br>&micro;L/board &nbsp; bd20 '+meta.boardTotal[20].toFixed(0)+
+          ' &nbsp; bd10 '+meta.boardTotal[10].toFixed(0)+
+          ' &nbsp; bd30 '+meta.boardTotal[30].toFixed(0)+
+          ' &nbsp; bd5 '+meta.boardTotal[5].toFixed(0);
+    if(extra)html+='<br><span style="color:#e8a34a">'+extra+'</span>';
+    readout.innerHTML=html;
+  }
+
+  canvas.addEventListener('mousemove',function(e){
+    var r=canvas.getBoundingClientRect();
+    var x=e.clientX-r.left,y=e.clientY-r.top;
+    var li=(y<LANE_Y[0]+LANE_W+GAP/2)?0:1;
+    var ly=LANE_Y[li],L=lanes[li];
+    var ft=xToFt(x),bd=yToBoard(ly,y);
+    if(bd<0.5||bd>39.5||ft<-APPROACH_FT||ft>END_FT){setReadout('');return;}
+    var bi=Math.round(bd),ii=Math.floor(ft*12);
+    var cell=(bi>=1&&bi<=39&&ii>=0&&ii<MAT_IN)?L.mat[bi][ii]:0;
+    setReadout(ft.toFixed(1)+' ft, board '+bd.toFixed(1)+' &mdash; '+
+      cell.toFixed(3)+' &micro;L in this 1in cell, '+
+      (bi>=1&&bi<=39?L.meta.boardTotal[bi].toFixed(0):'0')+' &micro;L down the board', li);
+  });
+  var dragging=false;
+  function setXS(clientX){
+    var r=canvas.getBoundingClientRect();
+    var ft=xToFt(clientX-r.left);
+    g.xs=Math.max(0,Math.min(60,Math.round(ft*2)/2));
+    refresh();
+  }
+  canvas.addEventListener('mousedown',function(e){
+    var r=canvas.getBoundingClientRect();
+    var x=e.clientX-r.left;
+    // grabbing near the line drags it; clicking elsewhere selects that lane
+    if(Math.abs(x-ftToX(g.xs))<12){ dragging=true; e.preventDefault(); return; }
+    var li=((e.clientY-r.top)<LANE_Y[0]+LANE_W+GAP/2)?0:1;
+    if(li!==sel){ sel=li; syncTabs(); }
+    setXS(e.clientX);
+  });
+  window.addEventListener('mousemove',function(e){ if(dragging) setXS(e.clientX); });
+  window.addEventListener('mouseup',function(){ dragging=false; });
+
+  // ---------------- controls ----------------
+  var elPreset=document.getElementById('preset');
+  KEYS.forEach(function(k){
+    var P=PATTERNS[k];
+    var o=document.createElement('option');o.value=k;
+    o.textContent=k+'  ('+P.distance+'ft, '+P.volume.toFixed(1)+'mL)';
+    elPreset.appendChild(o);
+  });
+  var el={};['buf','shot','bp','xs'].forEach(function(i){el[i]=document.getElementById(i);});
+  var lab={buf:document.getElementById('bufV'),shot:document.getElementById('shotV'),
+           bp:document.getElementById('bpV'),xs:document.getElementById('xsV')};
+
+  function syncTabs(){
+    document.getElementById('L1').classList.toggle('on',sel===0);
+    document.getElementById('L2').classList.toggle('on',sel===1);
+  }
+  function sync(){
+    var L=lanes[sel];
+    elPreset.value=L.pattern;
+    lab.buf.textContent=L.buffer.toFixed(2);
+    lab.shot.textContent=L.shots;
+    lab.bp.textContent=breakBoard(L).toFixed(1);
+    el.buf.value=L.buffer;el.shot.value=L.shots;el.bp.value=L.bp;
+    lab.xs.textContent=g.xs.toFixed(1)+' ft';el.xs.value=g.xs;
+    document.getElementById('pocketNote').textContent='pocket board '+pocketBoard();
+  }
+  function refresh(){sync();drawAll();setReadout('');}
+  function setField(f,v){
+    lanes[sel][f]=v;
+    if(link) lanes[1-sel][f]=v;
+  }
+
+  elPreset.addEventListener('change',function(){setField('pattern',elPreset.value);refresh();});
+  el.buf.addEventListener('input',function(){setField('buffer',+el.buf.value);refresh();});
+  el.shot.addEventListener('input',function(){setField('shots',+el.shot.value);refresh();});
+  el.bp.addEventListener('input',function(){setField('bp',+el.bp.value);refresh();});
+  el.xs.addEventListener('input',function(){g.xs=+el.xs.value;refresh();});
+  document.getElementById('link').addEventListener('change',function(e){
+    link=e.target.checked;
+    if(link){ var s=lanes[sel];
+      ['pattern','shots','bp','buffer'].forEach(function(f){lanes[1-sel][f]=s[f];}); }
+    refresh();
+  });
+  ['tOil','tPath','tEntry','tHit'].forEach(function(id){
+    var key={tOil:'oil',tPath:'path',tEntry:'entry',tHit:'hit'}[id];
+    document.getElementById(id).addEventListener('change',function(e){
+      g[key]=e.target.checked;refresh();});
+  });
+  document.getElementById('L1').addEventListener('click',function(){sel=0;syncTabs();refresh();});
+  document.getElementById('L2').addEventListener('click',function(){sel=1;syncTabs();refresh();});
+  document.getElementById('rh').addEventListener('click',function(){
+    g.rh=true;this.classList.add('on');
+    document.getElementById('lh').classList.remove('on');refresh();});
+  document.getElementById('lh').addEventListener('click',function(){
+    g.rh=false;this.classList.add('on');
+    document.getElementById('rh').classList.remove('on');refresh();});
+
+  syncTabs();refresh();
+  document.getElementById('scroller').scrollLeft=ftToX(60)-window.innerWidth*0.75;
+})();
+</script>
+</body>
+</html>
