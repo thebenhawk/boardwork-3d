@@ -88,6 +88,15 @@
   .gritRow button.reset{font-size:10px;background:none;border:1px solid #3a3a3a;color:#8a8a8a;
        border-radius:3px;padding:2px 6px;cursor:pointer}
   .gritHint{font-size:10px;color:#e8a34a;margin-top:3px}
+  .ballAvatar{width:36px;height:36px;border-radius:50%;flex:none;display:flex;align-items:center;
+       justify-content:center;font-size:12px;font-weight:700;color:#0006;
+       border:1px solid #0003;box-shadow:inset 0 0 0 2px #ffffff22}
+  .bagRow .rowTop{gap:8px}
+  .bagRow .rowTop .nameWrap{display:flex;align-items:center;gap:8px;min-width:0}
+  .bagRow .rowTop .nameWrap b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  input[type=color]{width:26px;height:22px;padding:1px;border:1px solid #3a3a3a;border-radius:3px;
+       background:#232323;cursor:pointer}
+  .colorRow{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:10px;color:#8a8a8a}
 
   /* ---- physics tab ---- */
   #panel-physics .card{max-width:640px}
@@ -330,7 +339,7 @@ function gritIndexFor(b){ return GRIT_LADDER.indexOf(b.boxGrit); }
   document.getElementById('addToBag').addEventListener('click', function(){
     var id = catalogSel.value, w = +catalogWt.value;
     if(bag.some(function(e){return e.id===id;})) return;
-    bag.push({id:id, weightLbs:w, benchmarkPin:false, appliedGritIdx:null});
+    bag.push({id:id, weightLbs:w, benchmarkPin:false, appliedGritIdx:null, color:'#e8a34a'});
     saveBag(bag); renderBag(); renderChart();
   });
 
@@ -350,6 +359,7 @@ function gritIndexFor(b){ return GRIT_LADDER.indexOf(b.boxGrit); }
       var role = ballRole(b);
       var defaultIdx = gritIndexFor(b);
       var appliedIdx = entry.appliedGritIdx != null ? entry.appliedGritIdx : defaultIdx;
+      if(entry.color == null) entry.color = '#e8a34a'; // upgrade old entries saved before colors existed
       var row = document.createElement('div'); row.className = 'bagRow';
       var wtOpts = '';
       for(var w=b.weightRangeLbs[1]; w>=b.weightRangeLbs[0]; w--){
@@ -357,8 +367,13 @@ function gritIndexFor(b){ return GRIT_LADDER.indexOf(b.boxGrit); }
       }
       var roleClass = role.strength ? 'role-'+role.strength.toLowerCase() : 'role-spare';
       var pinTitle = entry.benchmarkPin ? 'This is your pinned benchmark' : 'Pin as my benchmark';
+      var initials = b.name.split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
       row.innerHTML =
-        '<div class="rowTop"><b>'+b.name+'</b>'+
+        '<div class="rowTop">'+
+          '<span class="nameWrap">'+
+            '<span class="ballAvatar" style="background:'+entry.color+'" title="Photo &mdash; coming soon">'+initials+'</span>'+
+            '<b>'+b.name+'</b>'+
+          '</span>'+
           '<span><button class="pinBtn'+(entry.benchmarkPin?' on':'')+'" data-i="'+idx+'" title="'+pinTitle+'">&#9733;</button>'+
           '<button class="remove" title="Remove" data-i="'+idx+'">&times;</button></span></div>'+
         '<div class="rowTop" style="margin-top:2px">'+
@@ -380,6 +395,10 @@ function gritIndexFor(b){ return GRIT_LADDER.indexOf(b.boxGrit); }
           '<div class="gritHint">'+(appliedIdx<defaultIdx?
             '&#9660; rougher than box &mdash; estimate: more hook, less length':
             '&#9650; smoother than box &mdash; estimate: more length, less hook')+'</div>')+
+        '<div class="colorRow">'+
+          '<input type="color" class="color" data-i="'+idx+'" value="'+entry.color+'">'+
+          '<span>marker color &mdash; used until real ball photos are added</span>'+
+        '</div>'+
         '<div class="future">Drill layout &amp; PAP assignment &mdash; coming soon</div>';
       bagList.appendChild(row);
     });
@@ -388,6 +407,7 @@ function gritIndexFor(b){ return GRIT_LADDER.indexOf(b.boxGrit); }
     var i = +e.target.dataset.i; if(isNaN(i)) return;
     if(e.target.classList.contains('wt')){ bag[i].weightLbs = +e.target.value; saveBag(bag); renderBag(); return; }
     if(e.target.classList.contains('grit')){ bag[i].appliedGritIdx = +e.target.value; saveBag(bag); renderBag(); return; }
+    if(e.target.classList.contains('color')){ bag[i].color = e.target.value; saveBag(bag); renderBag(); renderChart(); return; }
     saveBag(bag);
   });
   bagList.addEventListener('click', function(e){
@@ -440,13 +460,14 @@ function gritIndexFor(b){ return GRIT_LADDER.indexOf(b.boxGrit); }
 
     bag.forEach(function(entry){
       var b = BALLS[entry.id]; if(!b) return;
+      var color = entry.color || '#e8a34a';
       var lenAxis = Math.max(0,Math.min(1,b.motivLength/100));
       var hookAxis = Math.max(0,Math.min(1,b.motivHook/100));
       var x = PAD + lenAxis*PLOT, y = PAD + (1-hookAxis)*PLOT;
       if(entry.benchmarkPin){
-        svg.appendChild(el('circle',{cx:x,cy:y,r:9,fill:'none',stroke:'#e8a34a','stroke-width':1.5}));
+        svg.appendChild(el('circle',{cx:x,cy:y,r:9,fill:'none',stroke:color,'stroke-width':1.5}));
       }
-      svg.appendChild(el('circle',{cx:x,cy:y,r:5,fill:'#e8a34a','fill-opacity':0.85,stroke:'#101010','stroke-width':1}));
+      svg.appendChild(el('circle',{cx:x,cy:y,r:5,fill:color,'fill-opacity':0.9,stroke:'#101010','stroke-width':1}));
       var t = el('text',{x:x+7,y:y+3,fill:'#c8c8c8','font-size':8,'font-family':'sans-serif'});
       t.textContent = b.name + (entry.benchmarkPin ? ' ★' : '');
       svg.appendChild(t);

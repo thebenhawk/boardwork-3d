@@ -56,11 +56,15 @@ for the renderer's own seams.
       manufacturer-published formula for the exact effect
 - [ ] Drill layout assignment (layout sheet: pin, PAP, drill angles)
 - [ ] Positive Axis Point (PAP) capture per ball
-- [ ] Ball images (real, cropped-to-circle Motiv product photos, or
-      user-uploaded photos with crop/zoom) in the bag and on the shape chart —
-      flagged as a nice-to-have, not started. Would need either hotlinking
-      Motiv's own hosted images (not re-hosting copies) or a crop/zoom upload
-      UI backed by browser storage (no server to upload to)
+- [x] Baseline for ball images: a per-ball color picker plus a circular
+      monogram avatar in the bag (initials on the picked color) as a stand-in
+      until real photos exist. The chart dots use the same color, and the
+      pinned benchmark gets a ring in that color too.
+- [ ] Real ball images (cropped-to-circle Motiv product photos, or
+      user-uploaded photos with crop/zoom) replacing the color/monogram
+      placeholder, in the bag and on the shape chart. Would need either
+      hotlinking Motiv's own hosted images (not re-hosting copies) or a
+      crop/zoom upload UI backed by browser storage (no server to upload to)
 
 ## Bowler Profile (`index.html`)
 
