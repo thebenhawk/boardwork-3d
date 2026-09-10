@@ -27,6 +27,18 @@ source_url. A few notes on the data shape:
 - `flare_potential_in` / `flare_potential_plus`: Motiv publishes flare as a
   minimum threshold (e.g. "7"+"), so `flare_potential_plus=True` means "this
   many inches or more," not an exact figure.
+- `box_grit` / `box_finish`: the factory-applied surface (e.g. 1000 Grit LSS),
+  parsed out of `coverstock_name`. This is the ball's default/as-shipped
+  state - a UI surface-adjustment control should reset to this.
+- `core_symmetric`: True/False, parsed from `core_name`. Used (with
+  `motiv_hook`) to classify each ball into the bowling industry's standard
+  6-category arsenal system - Strong/Medium/Weak (hook) x Smooth/Sharp
+  (symmetric core -> smoother arc, asymmetric -> sharper backend move). A
+  "benchmark" ball is specifically the Medium/Smooth combination; this is a
+  documented coaching convention (bowling.com), not something invented for
+  this project - though the Smooth/Sharp read itself is a simplification
+  (real shape also depends on cover finish and drilling), since Motiv
+  doesn't publish a numeric shape/angularity rating.
 """
 
 MOTIV_BALLS_COMPLETE = {
@@ -44,6 +56,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Leverage HXC Solid Reactive, 1000 Grit LSS",
         "box_grit": 1000, "box_finish": "LSS",
         "core_name": "Predator V2 (asymmetric)",
+        "core_symmetric": False,
         "category": "Heavy Oil", "release_year": 2025,
         "motiv_length": 53, "motiv_backend": 70, "motiv_hook": 87,
         "flare_potential_in": 7, "flare_potential_plus": True,
@@ -63,6 +76,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Leverage MXV Solid Reactive, 2000 Grit LSS",
         "box_grit": 2000, "box_finish": "LSS",
         "core_name": "Affliction V2 (symmetric)",
+        "core_symmetric": True,
         "category": "Heavy Oil", "release_year": 2025,
         "motiv_length": 60, "motiv_backend": 74, "motiv_hook": 83,
         "flare_potential_in": 5, "flare_potential_plus": True,
@@ -82,6 +96,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Leverage HFS Reactive, 3000 Grit LSS",
         "box_grit": 3000, "box_finish": "LSS",
         "core_name": "Predator V2 (asymmetric)",
+        "core_symmetric": False,
         "category": "Heavy Oil", "release_year": 2026,
         "motiv_length": 65, "motiv_backend": 76, "motiv_hook": 80,
         "flare_potential_in": 7, "flare_potential_plus": True,
@@ -103,6 +118,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Propulsion MXV Pearl Reactive, 5000 Grit LSS",
         "box_grit": 5000, "box_finish": "LSS",
         "core_name": "Apex Predator (asymmetric, dual-density)",
+        "core_symmetric": False,
         "category": "Heavy Oil", "release_year": 2026,
         "motiv_length": 73, "motiv_backend": 87, "motiv_hook": 78,
         "flare_potential_in": 7, "flare_potential_plus": True,
@@ -123,6 +139,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Leverage MXT Solid Reactive, 1000 Grit LSS (Duramax)",
         "box_grit": 1000, "box_finish": "LSS",
         "core_name": "Detonator (symmetric)",
+        "core_symmetric": True,
         "category": "Medium-Heavy Oil", "release_year": 2026,
         "motiv_length": 55, "motiv_backend": 73, "motiv_hook": 78,
         "flare_potential_in": 5, "flare_potential_plus": True,
@@ -142,6 +159,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Propulsion MXV Solid Reactive, 2000 Grit LSS",
         "box_grit": 2000, "box_finish": "LSS",
         "core_name": "Overload (asymmetric)",
+        "core_symmetric": False,
         "category": "Medium-Heavy Oil", "release_year": 2026,
         "motiv_length": 65, "motiv_backend": 78, "motiv_hook": 77,
         "flare_potential_in": 7, "flare_potential_plus": True,
@@ -161,6 +179,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Propulsion MXV Pearl Reactive, 4000 Grit LSS",
         "box_grit": 4000, "box_finish": "LSS",
         "core_name": "Overload (asymmetric, tunable differential)",
+        "core_symmetric": False,
         "category": "Medium-Heavy Oil", "release_year": 2025,
         "motiv_length": 70, "motiv_backend": 84, "motiv_hook": 72,
         "flare_potential_in": 7, "flare_potential_plus": True,
@@ -180,6 +199,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Propulsion MXV Pearl Reactive, 5000 Grit LSS",
         "box_grit": 5000, "box_finish": "LSS",
         "core_name": "Detonator (symmetric)",
+        "core_symmetric": True,
         "category": "Medium-Heavy Oil", "release_year": 2025,
         "motiv_length": 74, "motiv_backend": 88, "motiv_hook": 76,
         "flare_potential_in": 5, "flare_potential_plus": True,
@@ -199,6 +219,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Coercion HFS Reactive (Solid), 3000 Grit LSS",
         "box_grit": 3000, "box_finish": "LSS",
         "core_name": "Impulse V2 (symmetric)",
+        "core_symmetric": True,
         "category": "Medium Oil", "release_year": 2025,
         "motiv_length": 63, "motiv_backend": 70, "motiv_hook": 67,
         "flare_potential_in": 5, "flare_potential_plus": True,
@@ -220,6 +241,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Atomic Propulsion Pearl Reactive, 5000 Grit LSS",
         "box_grit": 5000, "box_finish": "LSS",
         "core_name": "Sigma (symmetric)",
+        "core_symmetric": True,
         "category": "Medium Oil", "release_year": 2026,
         "motiv_length": 67, "motiv_backend": 78, "motiv_hook": 65,
         "flare_potential_in": 4, "flare_potential_plus": True,
@@ -239,6 +261,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Dark Matter Propulsion Pearl Reactive, 5500 Grit LSP",
         "box_grit": 5500, "box_finish": "LSP",
         "core_name": "Hadron (symmetric, dual-density)",
+        "core_symmetric": True,
         "category": "Medium Oil", "release_year": 2025,
         "motiv_length": 74, "motiv_backend": 90, "motiv_hook": 62,
         "flare_potential_in": 5, "flare_potential_plus": True,
@@ -260,6 +283,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Frixion M7 Pearl MCP, 78D+ hardness, 1000 Grit LSS",
         "box_grit": 1000, "box_finish": "LSS",
         "core_name": "Flux (symmetric)",
+        "core_symmetric": True,
         "category": "Light Oil", "release_year": 2025,
         "motiv_length": 37, "motiv_backend": 35, "motiv_hook": 36,
         "flare_potential_in": 2, "flare_potential_plus": True,
@@ -279,6 +303,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Propulsion MXR Pearl Reactive, 5500 Grit LSP",
         "box_grit": 5500, "box_finish": "LSP",
         "core_name": "Gear (symmetric)",
+        "core_symmetric": True,
         "category": "Light-Medium Oil", "release_year": 2024,
         "motiv_length": 76, "motiv_backend": 81, "motiv_hook": 48,
         "flare_potential_in": 3, "flare_potential_plus": True,
@@ -299,6 +324,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Leverage MFS Solid Reactive, 4000 Grit LSS",
         "box_grit": 4000, "box_finish": "LSS",
         "core_name": "Gear APG (asymmetric)",
+        "core_symmetric": False,
         "category": "Light-Medium Oil", "release_year": 2023,
         "motiv_length": 56, "motiv_backend": 70, "motiv_hook": 58,
         "flare_potential_in": 3, "flare_potential_plus": True,
@@ -318,6 +344,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Turmoil MFS Solid Reactive, 4000 Grit LSS",
         "box_grit": 4000, "box_finish": "LSS",
         "core_name": "Gear (symmetric)",
+        "core_symmetric": True,
         "category": "Light-Medium Oil", "release_year": 2014,
         "motiv_length": 60, "motiv_backend": 75, "motiv_hook": 55,
         "flare_potential_in": 3, "flare_potential_plus": True,
@@ -335,6 +362,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Leverage MXC Solid Reactive (Duramax), 3000 Grit LSS",
         "box_grit": 3000, "box_finish": "LSS",
         "core_name": "Gear APG (asymmetric)",
+        "core_symmetric": False,
         "category": "Light-Medium Oil", "release_year": 2025,
         "motiv_length": 51, "motiv_backend": 62, "motiv_hook": 60,
         "flare_potential_in": 3, "flare_potential_plus": True,
@@ -354,6 +382,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Leverage MFS Solid Reactive, 4000 Grit LSS",
         "box_grit": 4000, "box_finish": "LSS",
         "core_name": "Quadfire (symmetric)",
+        "core_symmetric": True,
         "category": "Light-Medium Oil", "release_year": 2026,
         "motiv_length": 54, "motiv_backend": 68, "motiv_hook": 60,
         "flare_potential_in": 4, "flare_potential_plus": True,
@@ -374,6 +403,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Propulsion MXV Pearl Reactive, 5000 Grit LSS",
         "box_grit": 5000, "box_finish": "LSS",
         "core_name": "Gear (symmetric)",
+        "core_symmetric": True,
         "category": "Light-Medium Oil", "release_year": 2026,
         "motiv_length": 74, "motiv_backend": 77, "motiv_hook": 53,
         "flare_potential_in": 3, "flare_potential_plus": True,
@@ -394,6 +424,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Propulsion XRT Hybrid Reactive, 5500 Grit LSP",
         "box_grit": 5500, "box_finish": "LSP",
         "core_name": "Quadfire (symmetric)",
+        "core_symmetric": True,
         "category": "Light-Medium Oil", "release_year": 2025,
         "motiv_length": 80, "motiv_backend": 90, "motiv_hook": 54,
         "flare_potential_in": 4, "flare_potential_plus": True,
@@ -409,6 +440,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Turmoil XP3 Hybrid Reactive, 5500 Grit LSP",
         "box_grit": 5500, "box_finish": "LSP",
         "core_name": "Halogen (symmetric)",
+        "core_symmetric": True,
         "category": "Light Oil", "release_year": 2025,
         "motiv_length": 70, "motiv_backend": 76, "motiv_hook": 45,
         "flare_potential_in": 4, "flare_potential_plus": True,
@@ -424,6 +456,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Turmoil XP3 Pearl Reactive, 5500 Grit LSP",
         "box_grit": 5500, "box_finish": "LSP",
         "core_name": "Halogen (symmetric)",
+        "core_symmetric": True,
         "category": "Light Oil", "release_year": 2024,
         "motiv_length": 80, "motiv_backend": 82, "motiv_hook": 44,
         "flare_potential_in": 4, "flare_potential_plus": True,
@@ -444,6 +477,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Vitality Pearl Reactive, 5500 Grit LSP",
         "box_grit": 5500, "box_finish": "LSP",
         "core_name": "Excel (symmetric)",
+        "core_symmetric": True,
         # Motiv's own category tag, despite this being positioned/marketed as
         # an entry-level upgrade ball
         "category": "Light-Medium Oil", "release_year": 2026,
@@ -465,6 +499,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Vitality Pearl Reactive, 5500 Grit LSP",
         "box_grit": 5500, "box_finish": "LSP",
         "core_name": "Flux V2 (symmetric)",
+        "core_symmetric": True,
         # No explicit oil-range tag on Motiv's site for this one - using
         # their catalog section instead of guessing an oil range
         "category": "Entry Level", "release_year": 2025,
@@ -487,6 +522,7 @@ MOTIV_BALLS_COMPLETE = {
         "coverstock_name": "Polyester, 6000 Grit LSP",
         "box_grit": 6000, "box_finish": "LSP",
         "core_name": "Tyro weight block",
+        "core_symmetric": False,
         "category": "Spare", "release_year": 2025,
         "motiv_length": 100, "motiv_backend": 0, "motiv_hook": 0,
         "flare_potential_in": 1, "flare_potential_plus": True,

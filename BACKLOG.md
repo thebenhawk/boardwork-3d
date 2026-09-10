@@ -22,23 +22,45 @@ for the renderer's own seams.
       approximation of Motiv's proprietary "MCP," a few balls only have
       RG/diff confirmed at one weight, Sigma Tour Pearl's 14/15lb row is from
       a secondary source)
+- [x] `box_grit` / `box_finish` — factory surface, parsed from `coverstock_name`
+- [x] `core_symmetric` — parsed from `core_name`, feeds the Shape (Smooth/Sharp)
+      half of the arsenal role classification below
 
 ## Arsenal Builder (`index.html`)
 
 - [x] Ball catalog (from `balls_database.py`, snapshotted inline) with add-to-bag
-- [x] Per-ball Benchmark / Spare flags, editable finish (Solid/Pearl/Hybrid
-      Reactive, Urethane, Particle, Plastic) — stored in `localStorage`, this
-      browser only
 - [x] Weight picker per ball (options built from that model's real
       `weightRangeLbs`), RG/diff shown at the selected weight (falls back to
       the nearest weight Motiv actually published, never interpolated)
+- [x] Finish is shown as the manufacturer's real, fixed value — not editable
+      (an earlier version wrongly let you override it per bag entry)
+- [x] Box grit shown per ball (real value, e.g. "1000 LSS")
 - [x] Hook potential (0–200, `motivHook × 2` — a rescale of Motiv's own
       published index, not an independent estimate)
 - [x] Arsenal shape chart — hook axis × length axis, both Motiv's own
-      published Length/Hook indices for the ball's standard weight (no longer
-      a derived heuristic, now real manufacturer data)
+      published Length/Hook indices for the ball's standard weight (real
+      manufacturer data, not a derived estimate)
+- [x] Auto role badge per ball — Strong/Medium/Weak (Motiv's Hook index) ×
+      Smooth/Sharp (core symmetry), the bowling industry's standard
+      6-category arsenal system (bowling.com). Benchmark = Medium/Smooth is
+      flagged as "benchmark shape." Spare uses the real `category` field, no
+      heuristic. Shape is a simplification — real shape also depends on cover
+      finish and drilling, which Motiv doesn't publish a number for.
+- [x] Manual benchmark pin (★, one per bag) since real bowlers sometimes pick
+      by feel rather than strict category — separate from the auto role badge
+- [x] Surface-adjustment slider (grit ladder, defaults to each ball's real box
+      grit, resettable) — **directional indicator only**: it shows "rougher
+      → more hook/less length" or "smoother → more length/less hook" as a
+      hint, per bowling.com/bowlerx coaching guidance, but does not change the
+      displayed RG/Hook numbers or the chart position, since there's no
+      manufacturer-published formula for the exact effect
 - [ ] Drill layout assignment (layout sheet: pin, PAP, drill angles)
 - [ ] Positive Axis Point (PAP) capture per ball
+- [ ] Ball images (real, cropped-to-circle Motiv product photos, or
+      user-uploaded photos with crop/zoom) in the bag and on the shape chart —
+      flagged as a nice-to-have, not started. Would need either hotlinking
+      Motiv's own hosted images (not re-hosting copies) or a crop/zoom upload
+      UI backed by browser storage (no server to upload to)
 
 ## Bowler Profile (`index.html`)
 
