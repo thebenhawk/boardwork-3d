@@ -1,273 +1,144 @@
-# Boardwork 3D - Bowling Ball Physics Simulator
+# Boardwork 3D — Bowling Ball Physics
 
-A realistic bowling ball physics simulator that predicts ball trajectory, entry angle, breakpoint, and strike probability in real-time.
+Two separate bodies of work live here, built at different times and not yet
+connected:
 
-![Status](https://img.shields.io/badge/status-MVP%20Ready-brightgreen)
-![Python](https://img.shields.io/badge/python-3.8%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-blue)
+- **Root** — a Flask API (`app.py`) over a set of physics "agent" modules
+  (`agent_02`…`agent_12`) and a ball database (`balls_database.py`).
+- **[`lane-renderer/`](lane-renderer/)** — a browser-only two-lane oil pattern
+  renderer built on real Kegel sheet data, with its own validation suite. See
+  [`lane-renderer/README.md`](lane-renderer/README.md) and
+  [`lane-renderer/AGENT_MAPPING.md`](lane-renderer/AGENT_MAPPING.md) for what
+  it does and where it's meant to feed back into the agents below — that
+  mapping isn't duplicated here.
 
-## Features
+This file replaces an earlier README that described the agent pipeline as
+more connected and more validated than it is. What follows was checked
+against the code, not against the docstrings.
 
-- **12 Physics Agents**: Full physics pipeline from initial conditions through gyroscopic precession
-- **50+ Ball Database**: Complete Motiv bowling ball catalog with real specs (2023-2026)
-- **Real-time Visualization**: Interactive lane with ball trajectory, breakpoint, and impact prediction
-- **Advanced Analytics**: 
-  - Flare calculation (track migration on ball surface)
-  - Oil saturation tracking (friction loss over time)
-  - Gyroscopic precession effects (spin axis tilt)
-  - Strike probability prediction
+## The physics agents
 
-## Quick Start
+`agent_02_oil_pattern.py` through `agent_12_gyroscopic_precession.py` (11
+files — there is no standalone `agent_01`; ball properties are just rows in
+`balls_database.py`). None of them import each other. The only things that
+import agent modules are `app.py` and `governor.py`, and both do the same
+thing: import each agent's `create_*`/`calculate_*` and `validate_*`
+functions and call them one at a time against that agent's own success
+criteria. **Every agent has been validated in isolation. None of them have
+been validated as a connected chain**, because nothing chains them —
+`governor.py` calls each `validate_*` independently, not agent N's output
+into agent N+1's input.
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/yourusername/boardwork-3d.git
-cd boardwork-3d
+### The one that actually runs an end-to-end simulation doesn't use the chain
+
+`/api/simulate` calls `agent_09_physics_integrator.run_physics_simulation()`
+for the trajectory. That function does not call agents 3–8 and does not
+import `agent_02` — it's a self-contained ~250-line loop with its own
+hardcoded Gaussian oil-density model and its own pattern-length table. The
+"12 agent pipeline" framing doesn't describe what actually produces a
+trajectory; agent_09 does, alone.
+
+That loop has a structural bug, not a tuning one: velocity initializes as
+`[0, speed, 0]` and friction each step is computed as a scalar coefficient
+times the (negative) velocity vector — anti-parallel by construction. A
+vector that starts with zero lateral component and is only ever scaled by
+its own direction stays at zero lateral component forever. Ran it directly:
+
+```
+entry_angle_deg   0.0
+breakpoint_board  20.0
+max_board_reached 20.0
 ```
 
-### 2. Install Dependencies
+for all 600 steps, every input tried. The ball cannot hook in this loop —
+there's no mechanism in it that could put a nonzero value into `velocity[0]`.
+Lateral motion is Agent #12's job (gyroscopic precession), which is called
+separately, after the fact, on the trajectory agent_09 already produced — it
+doesn't feed back in.
+
+This is visible in `app.py` itself: the `/api/simulate` handler computes
+`entry_angle = gyroscopic.entry_angle_deg if gyroscopic.entry_angle_deg != 0
+else sim.entry_angle_deg` and derives `breakpoint`/`hook_amount` from that
+patched value. So the API's reported hook numbers come from agent_12's
+independent calculation, while the `trajectory` array sent to the frontend
+for drawing the ball's actual path is agent_09's raw per-step output —
+pinned at board 20.0 the whole way. The reported hook and the drawn path
+disagree.
+
+There's also a likely unit bug in the same loop: `friction_force` is built
+from `normal_force_n = ball_mass_kg * 9.81 * 1.8` (newtons), and
+`accel = friction_force / ball_mass_kg` (m/s²) is added directly to
+`velocity`, which is carried in ft/s (`ball_speed_mph * 1.46667`) with no
+conversion between the two. If that's not intentional, deceleration is off
+by a factor of ~3.28.
+
+### Orphan modules
+
+- **`bowling_physics.py`** (~24 KB) implements all nine Phase-1 agents as
+  composed functions (`agent_1_ball_properties` … `agent_9_...`), citing
+  Brody Dylan Johnson's rolling-with-slipping equations. Nothing in the repo
+  imports it.
+- **`bowling_validator.py`** is a second, separate validation framework
+  (success criteria + an `AgentValidator` class) that also isn't imported by
+  anything.
+
+Neither is wired into `app.py` or `governor.py`. They read as an earlier or
+parallel attempt at the same problem, left in place.
+
+## Flask API (`app.py`)
+
+```
+GET  /api/health
+GET  /api/balls              # optional ?category= filter
+GET  /api/balls/<ball_id>
+GET  /api/patterns
+POST /api/simulate
+GET  /api/defaults
+```
+
+`python app.py` serves on port 5000. `boardwork_3d_mvp.html` is the
+browser frontend; open it directly or serve it over HTTP.
+
+## Ball database
+
+`balls_database.py` — 38 Motiv balls with weight, RG, differential, backend
+rating, flare potential, cover type, category. (Fewer than the "50+" the old
+README claimed.)
+
+## Setup
+
 ```bash
 pip install -r requirements.txt
+python app.py                  # Flask API on :5000
+open boardwork_3d_mvp.html     # or: python -m http.server 8000
 ```
 
-### 3. Run the Backend
-```bash
-python app.py
-```
+For the renderer instead: open [`lane-renderer/index.html`](lane-renderer/index.html)
+directly — no build step, no server needed. Its pattern data can be
+re-validated with `python lane-renderer/tools/validate.py` (11/11 pass as of
+this writing).
 
-You should see:
-```
-Starting Bowling Visualizer MVP Backend...
-Server running on http://localhost:5000
-```
+## Where the two halves meet
 
-### 4. Open the Simulator in Browser
-```bash
-# Option A: Open the HTML file directly
-open boardwork_3d_mvp.html
-# or on Windows
-start boardwork_3d_mvp.html
+`lane-renderer/` renders a ball path through one function,
+`pathBoardAt(lane, feet) -> board`. Per
+[`lane-renderer/AGENT_MAPPING.md`](lane-renderer/AGENT_MAPPING.md), that
+function is a placeholder: only the endpoints (laydown at board 20, the
+breakpoint board, the pocket) and a fixed 6° tangent at 60 ft are real: the
+curve between them is a cubic Hermite blend, not physics. Agent #9 is meant
+to replace it — but the current `agent_09_physics_integrator.py`, per above,
+can't produce a hook at all, so it isn't a drop-in replacement yet. That
+function signature — `board = f(feet)` — is the actual seam between these two
+bodies of work.
 
-# Option B: Serve via HTTP (recommended)
-python -m http.server 8000
-# Then open: http://localhost:8000/boardwork_3d_mvp.html
-```
+## Honest status
 
-## How to Use
-
-1. **Select a ball** from the 50+ ball database (filterable by category)
-2. **Adjust parameters**:
-   - Ball speed (14-24 mph)
-   - RPM (50-400)
-   - Oil pattern (House Shot, PBA patterns)
-   - Oil condition (Fresh, Transition, Broken)
-3. **Click SIMULATE** to run physics engine
-4. **View results**:
-   - Entry angle at pin deck (target: 6°)
-   - Breakpoint (where hook begins)
-   - Hook amount (boards hooked from center)
-   - Flare distance and saturation
-   - Strike probability
-   - Real-time trajectory visualization
-
-## Architecture
-
-### Backend (Flask REST API)
-- **Port**: 5000
-- **Endpoints**:
-  - `GET /api/health` — Health check
-  - `GET /api/balls` — List all balls (filterable by category)
-  - `GET /api/balls/<ball_id>` — Get specific ball specs
-  - `GET /api/patterns` — List oil patterns
-  - `POST /api/simulate` — Run full physics simulation
-  - `GET /api/defaults` — Get default parameters
-
-### Physics Pipeline (12 Agents)
-**Phase 1: Core Physics**
-1. Ball Properties (moment of inertia tensor)
-2. Oil Pattern (bilinear interpolation on 2D matrix)
-3. Initial Conditions (speed, RPM, axis angle)
-4. Contact Patch (friction surface area)
-5. Friction & Torque (force calculation)
-6. Rotational Dynamics (spin decay)
-7. Translational Dynamics (deceleration)
-8. Trajectory Integrator (60 ft path)
-9. Physics Integrator (unified simulation)
-
-**Phase 2: Advanced Effects**
-10. Flare (track migration, 1-4 inches typical)
-11. Saturation (oil absorption, friction loss)
-12. Gyroscopic Precession (spin axis tilt, lateral velocity)
-
-### Frontend
-- **HTML5 Canvas** for lane visualization
-- **Responsive three-panel layout**:
-  - Left: Control panel with ball selector and parameters
-  - Center: Lane visualization with trajectory
-  - Right: Results display with all agent outputs
-
-## API Response Example
-
-```json
-{
-  "success": true,
-  "input": {
-    "ball_id": "jackal_ghost",
-    "ball_speed_mph": 18.0,
-    "ball_rpm": 300,
-    "oil_pattern": "house_shot",
-    "oil_condition": "fresh"
-  },
-  "ball": {
-    "name": "Jackal Ghost",
-    "backend_rating": 10,
-    "flare_potential": 4.1,
-    "rg": 2.44,
-    "differential": 0.063,
-    "cover_type": "reactive"
-  },
-  "output": {
-    "agent_9": {
-      "initial_speed_mph": 18.0,
-      "final_speed_mph": 17.77,
-      "initial_rpm": 300,
-      "final_rpm": 275.3,
-      "entry_angle_deg": 0.0,
-      "breakpoint_board": 20.0,
-      "energy_lost_pct": 3.38
-    },
-    "agent_10": {
-      "flare_distance_inches": 2.08,
-      "track_width_inches": 0.83,
-      "revolutions_total": 57
-    },
-    "agent_11": {
-      "saturation_pct_final": 89.67,
-      "oil_absorbed_cc": 0.026,
-      "friction_coefficient_final": 0.057
-    },
-    "agent_12": {
-      "entry_angle_deg": 15.0,
-      "lateral_velocity_ft_s": 7.89,
-      "precession_rate_deg_per_ft": 0.0233,
-      "spin_axis_angle_deg": 50.6
-    },
-    "summary": {
-      "strike_chance_pct": 45.0,
-      "hook_amount_boards": 44.46
-    }
-  }
-}
-```
-
-## Ball Database
-
-Includes 50+ Motiv bowling balls with real specifications:
-- Weight (10-16 lbs)
-- RG (Radius of Gyration)
-- Differential
-- Backend rating (0-10)
-- Flare potential (1-4 inches)
-- Cover type (plastic, reactive, hybrid)
-- Category (heavy oil, medium oil, light oil, entry level, spare)
-
-## Key Physics Concepts
-
-### Entry Angle
-The angle at which the ball enters the pin deck (60 ft). Target: **6° ± 2°** for maximum strike probability.
-
-### Breakpoint
-The board where the ball's lateral motion becomes significant (where hook "turns").
-
-### Flare
-Distance the track migrates on ball surface (1-4 inches typical). Depends on RG, differential, RPM decay, and oil condition.
-
-### Saturation
-Percentage of ball surface that has absorbed lane oil (0-100%). Increases friction loss and affects how much the ball hooks.
-
-### Gyroscopic Precession
-Spin axis tilts laterally due to friction, creating lateral velocity component that adds to the ball's board movement.
-
-## Success Criteria Met
-
-✓ Ball rolls without spiraling (energy decreases monotonically)  
-✓ Entry angle plausible (±1° of high-speed camera footage)  
-✓ Breakpoint accurate (±3 boards of real data)  
-✓ Flare within manufacturer specs  
-✓ Saturation map shows realistic track pattern  
-✓ Strike probability correlates with entry angle  
-
-## Known Limitations
-
-- Flare rings not yet rendered on lane canvas (Phase 3)
-- Saturation map overlay not yet implemented (Phase 3)
-- Energy dissipation curves not yet plotted (Phase 3)
-- No multi-player league tracking yet (Tier 2)
-
-## Technical Stack
-
-- **Backend**: Python 3.8+, Flask, Flask-CORS
-- **Physics**: NumPy for matrix operations and numerical integration
-- **Frontend**: HTML5, Canvas API, Vanilla JavaScript
-- **Data**: 56+ ball specifications, PBA oil patterns
-- **Integration**: Distance-based physics (0.1 ft timesteps)
-
-## Development
-
-### Running Tests
-```bash
-python -c "from agent_09_physics_integrator import run_physics_simulation; print('✓ Physics agent loads')"
-```
-
-### Project Structure
-```
-boardwork-3d/
-├── app.py                          # Flask backend
-├── balls_database.py               # 50+ ball specs
-├── agent_02_oil_pattern.py        # Phase 1
-├── agent_03_initial_conditions.py
-├── ... (agents 4-9)
-├── agent_10_flare.py              # Phase 2
-├── agent_11_saturation.py
-├── agent_12_gyroscopic_precession.py
-├── boardwork_3d_mvp.html          # Interactive UI
-├── requirements.txt               # Dependencies
-└── README.md                       # This file
-```
-
-## Next Steps (Tier 2+)
-
-- Arsenal builder (save multiple ball configurations)
-- League session tracker (multi-player, multi-lane)
-- Layout customization (PAP, drill angle, RG, differential)
-- High-speed camera overlay integration
-- Real-time lane oil tracking
-
-## Contributing
-
-Contributions welcome! Areas for improvement:
-- Phase 3 visualization features (flare rings, saturation map)
-- Additional ball database entries
-- Performance optimizations
-- Mobile app wrapper
-
-## License
-
-MIT License - See LICENSE file for details
-
-## Author
-
-Built with Claude Code - Bowling Visualizer Project
-
-## Support
-
-For issues, feature requests, or questions:
-1. Check MVP_QUICK_START.md for troubleshooting
-2. Review agent output in browser console
-3. Check Flask server logs
-
----
-
-**Status**: MVP Ready for Testing  
-**Version**: 0.1.0  
-**Last Updated**: September 9, 2026
+- Oil pattern data (`lane-renderer/`): real, validated against source sheets,
+  11/11 passing.
+- Agent success-criteria checks: each agent passes its own isolated
+  `validate_*`, never checked in combination.
+- End-to-end trajectory (`agent_09` via `/api/simulate`): runs without
+  crashing, reaches 60 ft, but cannot hook — board and entry angle are
+  constant by construction. The hook number in the API response comes from a
+  separate calculation, not from the drawn path.
+- `bowling_physics.py` and `bowling_validator.py`: complete but unused.
