@@ -105,6 +105,18 @@ browser frontend; open it directly or serve it over HTTP.
 rating, flare potential, cover type, category. (Fewer than the "50+" the old
 README claimed.)
 
+## Web shell (`index.html`)
+
+The GitHub Pages root is a tabbed static shell — Lane Renderer, Arsenal
+Builder, Bowler Profile, and a Physics Simulator tab that just explains why
+that piece can't run on Pages (it needs the Flask API). Arsenal Builder and
+Bowler Profile are new UI-only features: a bag of balls with benchmark/spare
+flags and an approximate hook/length shape chart, and a bowler profile with a
+heuristic style classification (Stroker/Tweener/Cranker/Power Player) from
+rev rate ÷ ball speed. Both persist to this browser's `localStorage` only —
+nothing is synced anywhere, and neither is wired into the physics pipeline
+yet. See [`BACKLOG.md`](BACKLOG.md) for what's built vs planned.
+
 ## Setup
 
 ```bash

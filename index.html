@@ -6,55 +6,402 @@
 <title>Boardwork 3D</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{background:#101010;color:#c8c8c8;font:15px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-       min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-  main{max-width:640px;width:100%}
-  h1{color:#e8e8e8;font-size:26px;font-weight:600;margin-bottom:6px}
-  p.sub{color:#8a8a8a;font-size:14px;margin-bottom:32px;line-height:1.5}
-  .card{background:#181818;border:1px solid #2c2c2c;border-radius:6px;padding:18px 20px;margin-bottom:14px}
-  .card h2{color:#e8a34a;font-size:15px;font-weight:600;margin-bottom:6px}
-  .card p{color:#a0a0a0;font-size:13px;line-height:1.55;margin-bottom:10px}
-  .card a.btn{display:inline-block;background:#e8a34a;color:#111;text-decoration:none;font-size:13px;
-              font-weight:600;padding:7px 14px;border-radius:4px}
-  .card a.btn:hover{background:#f4b25f}
-  .card.dim{opacity:.75}
-  .card.dim h2{color:#8a8a8a}
-  .status{display:inline-block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;
-          padding:2px 7px;border-radius:3px;margin-left:8px;vertical-align:middle}
-  .status.live{background:#5ddc8c22;color:#5ddc8c}
-  .status.local{background:#e8a34a22;color:#e8a34a}
-  footer{margin-top:24px;font-size:12px;color:#666}
-  footer a{color:#8a8a8a}
+  html,body{height:100%}
+  body{background:#101010;color:#c8c8c8;font:13px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+       display:flex;flex-direction:column;overflow:hidden}
+  a{color:#e8a34a}
+  h1,h2,h3{font-weight:600;color:#e8e8e8}
+  code{background:#1e1e1e;border:1px solid #2c2c2c;border-radius:3px;padding:1px 5px;font-size:12px}
+  pre{background:#141414;border:1px solid #2c2c2c;border-radius:5px;padding:12px 14px;
+      font-size:12px;line-height:1.6;overflow-x:auto;color:#a9d9a0}
+
+  /* ---- top bar / tabs ---- */
+  #top{flex:none;background:#181818;border-bottom:1px solid #2c2c2c;
+       display:flex;align-items:center;gap:18px;padding:0 16px;flex-wrap:wrap}
+  #top h1{font-size:15px;padding:12px 0}
+  #tabs{display:flex;gap:4px;flex-wrap:wrap}
+  #tabs button{background:transparent;border:none;border-bottom:2px solid transparent;
+               color:#8a8a8a;font-size:13px;padding:14px 12px;cursor:pointer}
+  #tabs button:hover{color:#ccc}
+  #tabs button.on{color:#e8a34a;border-bottom-color:#e8a34a}
+  #top .spacer{flex:1}
+  #top a.repo{font-size:12px;color:#6f6f6f;text-decoration:none}
+  #top a.repo:hover{color:#8a8a8a}
+
+  .tabpanel{flex:1 1 auto;overflow-y:auto;padding:20px}
+  .tabpanel[hidden]{display:none}
+  .tabpanel > *{max-width:1100px;margin:0 auto}
+  #panel-lane{padding:0;overflow:hidden}
+  #panel-lane[hidden]{display:none}
+  #laneFrame{display:block;width:100%;height:100%;max-width:none;border:none;background:#0a0a0a}
+
+  /* ---- shared controls ---- */
+  .seg{display:flex;border:1px solid #3a3a3a;border-radius:3px;overflow:hidden;width:fit-content}
+  .seg button{background:#232323;color:#999;border:none;padding:5px 12px;cursor:pointer;font-size:12px}
+  .seg button.on{background:#e8a34a;color:#111}
+  select,input[type=range],input[type=text]{background:#232323;color:#ddd;border:1px solid #3a3a3a;
+       padding:5px;border-radius:3px;font-size:12px}
+  select{width:100%}
+  label.field-label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;
+       color:#6f6f6f;margin-bottom:5px}
+  button.btn{background:#e8a34a;color:#111;border:none;font-weight:600;font-size:12px;
+       padding:7px 14px;border-radius:4px;cursor:pointer}
+  button.btn:hover{background:#f4b25f}
+  button.btn.ghost{background:transparent;color:#8a8a8a;border:1px solid #3a3a3a;font-weight:400}
+  button.btn.ghost:hover{color:#ccc;border-color:#555}
+  .card{background:#181818;border:1px solid #2c2c2c;border-radius:6px;padding:16px 18px}
+  .note{color:#6f6f6f;font-size:11px;line-height:1.5;margin-top:8px}
+  .warn{color:#e8a34a}
+
+  /* ---- arsenal builder ---- */
+  .arsenal-layout{display:grid;grid-template-columns:280px 1fr 300px;gap:16px}
+  @media (max-width:900px){.arsenal-layout{grid-template-columns:1fr}}
+  .arsenal-layout h2{font-size:13px;margin-bottom:10px}
+  #catalogPreview{margin-top:10px;font-size:11px;color:#8a8a8a;line-height:1.6}
+  #catalogPreview b{color:#d6d6d6}
+  .hookbar{background:#232323;border-radius:2px;height:5px;margin-top:2px;overflow:hidden}
+  .hookbar>i{display:block;height:100%;background:#e8a34a}
+  #bagList{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+  .bagRow{background:#141414;border:1px solid #262626;border-radius:5px;padding:10px 12px}
+  .bagRow .rowTop{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .bagRow .rowTop b{color:#e8e8e8;font-size:12.5px}
+  .bagRow .stats{color:#8a8a8a;font-size:11px;margin-top:3px;font-variant-numeric:tabular-nums}
+  .bagRow .controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;align-items:center}
+  .bagRow .controls label{display:flex;align-items:center;gap:4px;font-size:11px;color:#a0a0a0;cursor:pointer}
+  .bagRow select.finish{font-size:11px;padding:3px 5px}
+  .bagRow .remove{background:none;border:none;color:#6f6f6f;cursor:pointer;font-size:14px;line-height:1}
+  .bagRow .remove:hover{color:#e06060}
+  .bagRow .future{margin-top:7px;font-size:10px;color:#4a4a4a;border-top:1px dashed #2a2a2a;padding-top:6px}
+  .empty{color:#5f5f5f;font-size:12px;padding:20px 0;text-align:center}
+  .badge{font-size:9px;text-transform:uppercase;letter-spacing:.05em;padding:1px 6px;border-radius:8px;
+         background:#2a2a2a;color:#999}
+  .badge.on{background:#e8a34a33;color:#e8a34a}
+
+  /* ---- physics tab ---- */
+  #panel-physics .card{max-width:640px}
+
+  /* ---- bowler profile ---- */
+  .bowler-layout{display:grid;grid-template-columns:1fr 320px;gap:16px}
+  @media (max-width:760px){.bowler-layout{grid-template-columns:1fr}}
+  .field{margin-bottom:18px}
+  .field .rangeval{color:#e8a34a;font-variant-numeric:tabular-nums;font-size:12px}
+  .classCard{text-align:center;padding:28px 18px}
+  .classCard .className{font-size:22px;font-weight:700;color:#e8a34a}
+  .classCard .classSub{color:#6f6f6f;font-size:11px;margin-top:4px}
 </style>
 </head>
 <body>
-<main>
+
+<div id="top">
   <h1>Boardwork 3D</h1>
-  <p class="sub">Two separate bodies of work: a validated oil-pattern renderer, and a
-    physics-agent pipeline that isn't fully connected yet. See the
-    <a href="https://github.com/thebenhawk/boardwork-3d#readme" style="color:#e8a34a">README</a>
-    for the honest breakdown of what's real.</p>
+  <div id="tabs">
+    <button data-tab="lane" class="on">Lane Renderer</button>
+    <button data-tab="arsenal">Arsenal Builder</button>
+    <button data-tab="bowler">Bowler Profile</button>
+    <button data-tab="physics">Physics Simulator</button>
+  </div>
+  <div class="spacer"></div>
+  <a class="repo" href="https://github.com/thebenhawk/boardwork-3d">github.com/thebenhawk/boardwork-3d</a>
+</div>
 
+<!-- ============ LANE RENDERER (existing, working renderer, embedded as-is) ============ -->
+<div class="tabpanel" id="panel-lane">
+  <iframe id="laneFrame" src="lane-renderer/index.html"></iframe>
+</div>
+
+<!-- ============ ARSENAL BUILDER ============ -->
+<div class="tabpanel" id="panel-arsenal" hidden>
+  <div class="arsenal-layout">
+    <section class="card">
+      <h2>Ball catalog</h2>
+      <label class="field-label">Add a ball</label>
+      <select id="catalogSel"></select>
+      <div id="catalogPreview"></div>
+      <button class="btn" id="addToBag" style="margin-top:12px;width:100%">Add to bag</button>
+    </section>
+
+    <section class="card">
+      <h2>My bag <span id="bagCount" style="color:#6f6f6f;font-weight:400"></span></h2>
+      <div id="bagList"></div>
+      <div class="note">Benchmark / Spare, finish, and drill layout are stored in this browser
+        only (not synced anywhere). Layout &amp; PAP assignment is planned but not built yet.</div>
+    </section>
+
+    <section class="card">
+      <h2>Arsenal shape</h2>
+      <svg id="shapeChart" viewBox="0 0 260 260" style="width:100%;height:auto"></svg>
+      <div class="note">Approximate: hook axis is Motiv's backend rating (&divide;10), length axis is
+        normalized RG. This is a heuristic stand-in, not a manufacturer-published ball motion chart.</div>
+    </section>
+  </div>
+</div>
+
+<!-- ============ BOWLER PROFILE ============ -->
+<div class="tabpanel" id="panel-bowler" hidden>
+  <div class="bowler-layout">
+    <section class="card">
+      <h2 style="margin-bottom:16px">Bowler profile</h2>
+
+      <div class="field">
+        <label class="field-label">Hand</label>
+        <div class="seg">
+          <button id="bwRH" class="on" data-v="RH">Right</button>
+          <button id="bwLH" data-v="LH">Left</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Release style</label>
+        <div class="seg">
+          <button data-style="1h" class="on">One-Handed</button>
+          <button data-style="2h">Two-Handed</button>
+          <button data-style="nt">No-Thumb</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Ball speed <span class="rangeval" id="bwSpeedV"></span></label>
+        <input type="range" id="bwSpeed" min="12" max="24" step="0.5" style="width:100%">
+      </div>
+
+      <div class="field">
+        <label class="field-label">Rev rate <span class="rangeval" id="bwRevV"></span></label>
+        <input type="range" id="bwRev" min="50" max="600" step="5" style="width:100%">
+      </div>
+    </section>
+
+    <section class="card classCard">
+      <div class="classSub">Estimated style</div>
+      <div class="className" id="bwClass">&mdash;</div>
+      <div class="classSub" id="bwClassDetail" style="margin-top:10px;line-height:1.5"></div>
+      <div class="note" style="text-align:left;margin-top:16px">Classified from rev rate relative to
+        ball speed (rpm &divide; mph) &mdash; a simplified coaching heuristic, not an official rating.
+        Real classification also depends on axis rotation and tilt, which aren't collected here.</div>
+    </section>
+  </div>
+</div>
+
+<!-- ============ PHYSICS SIMULATOR (can't run on GitHub Pages) ============ -->
+<div class="tabpanel" id="panel-physics" hidden>
   <div class="card">
-    <h2>Lane Renderer <span class="status live">Live here</span></h2>
-    <p>Two-lane oil pattern renderer built on real Kegel sheet data — 11/11 patterns
-      validated against their source sheets. Runs entirely in the browser, no backend.</p>
-    <a class="btn" href="lane-renderer/">Open renderer →</a>
+    <h2 style="margin-bottom:10px">Physics simulator &mdash; local only</h2>
+    <p style="line-height:1.6;color:#a0a0a0;font-size:13px">
+      The ball-trajectory simulator (<code>boardwork_3d_mvp.html</code>) calls a Flask API
+      (<code>app.py</code>) for <code>/api/simulate</code>. GitHub Pages only serves static files,
+      so this piece can't run here &mdash; there's nothing to deploy short of rewriting the physics
+      in JavaScript or standing up a real backend.</p>
+    <p style="margin-top:12px;color:#a0a0a0;font-size:13px">To try it locally:</p>
+    <pre>git clone https://github.com/thebenhawk/boardwork-3d.git
+cd boardwork-3d
+pip install -r requirements.txt
+python app.py                  # Flask API on :5000
+# open boardwork_3d_mvp.html in a browser</pre>
+    <p class="warn" style="font-size:12px;margin-top:12px">Worth knowing before you do: the current
+      simulation loop can't actually produce a hook &mdash; board and entry angle are constant by
+      construction. See the <a href="https://github.com/thebenhawk/boardwork-3d#readme">README</a>
+      for the details.</p>
   </div>
+</div>
 
-  <div class="card dim">
-    <h2>Physics MVP <span class="status local">Local only</span></h2>
-    <p>The ball-trajectory simulator talks to a Flask API (<code>app.py</code>) for
-      <code>/api/simulate</code>. That can't run on GitHub Pages — this is a static
-      site with no backend — so this piece isn't deployed here. Clone the repo and
-      run <code>python app.py</code>, then open <code>boardwork_3d_mvp.html</code>
-      to try it locally. Worth knowing before you do: the current simulation loop
-      can't actually produce a hook (see README).</p>
-  </div>
+<script>
+"use strict";
 
-  <footer>
-    <a href="https://github.com/thebenhawk/boardwork-3d">github.com/thebenhawk/boardwork-3d</a>
-  </footer>
-</main>
+// ---- tab switching ----
+var panels = {lane:'panel-lane', arsenal:'panel-arsenal', bowler:'panel-bowler', physics:'panel-physics'};
+document.getElementById('tabs').addEventListener('click', function(e){
+  var btn = e.target.closest('button[data-tab]');
+  if(!btn) return;
+  document.querySelectorAll('#tabs button').forEach(function(b){b.classList.toggle('on', b===btn);});
+  Object.keys(panels).forEach(function(k){
+    document.getElementById(panels[k]).hidden = (k !== btn.dataset.tab);
+  });
+});
+
+// Static snapshot of balls_database.py (see lane-renderer/index.html for the same data).
+// hookPotential and finish are derived (backendRating*20, and a name-based guess where the
+// source data doesn't record finish) - not manufacturer figures.
+var BALLS = {"jackal_ghost":{"name":"Jackal Ghost","weightLbs":15,"rg":2.44,"diff":0.063,"backendRating":10,"flarePotential":4.1,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2023,"hookPotential":200},"jackal_ghost_pearl":{"name":"Jackal Ghost Pearl","weightLbs":15,"rg":2.44,"diff":0.063,"backendRating":9.5,"flarePotential":4.0,"coverType":"reactive","finish":"Pearl Reactive","category":"heavy_oil","releaseYear":2023,"hookPotential":190},"jackal_king":{"name":"Jackal King","weightLbs":15,"rg":2.42,"diff":0.065,"backendRating":9.8,"flarePotential":4.2,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2022,"hookPotential":196},"evoke_mayhem":{"name":"Evoke Mayhem","weightLbs":15,"rg":2.47,"diff":0.058,"backendRating":8.5,"flarePotential":3.8,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2023,"hookPotential":170},"raptor_reign":{"name":"Raptor Reign","weightLbs":15,"rg":2.52,"diff":0.048,"backendRating":8.5,"flarePotential":3.6,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2024,"hookPotential":170},"forge_pearl":{"name":"Forge Pearl","weightLbs":16,"rg":2.49,"diff":0.061,"backendRating":8.0,"flarePotential":3.7,"coverType":"reactive","finish":"Pearl Reactive","category":"heavy_oil","releaseYear":2021,"hookPotential":160},"forge_solid":{"name":"Forge Solid","weightLbs":16,"rg":2.48,"diff":0.059,"backendRating":7.8,"flarePotential":3.5,"coverType":"reactive","finish":"Solid Reactive","category":"heavy_oil","releaseYear":2021,"hookPotential":156},"forge_fire":{"name":"Forge Fire","weightLbs":15,"rg":2.45,"diff":0.062,"backendRating":8.2,"flarePotential":3.8,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2022,"hookPotential":164},"nebula":{"name":"Nebula","weightLbs":15,"rg":2.5,"diff":0.046,"backendRating":7.5,"flarePotential":3.2,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2023,"hookPotential":150},"phaze_ii":{"name":"Phaze II","weightLbs":16,"rg":2.55,"diff":0.055,"backendRating":7.2,"flarePotential":3.5,"coverType":"particle","finish":"Particle","category":"medium_oil","releaseYear":2022,"hookPotential":144},"marvel_pearl":{"name":"Marvel Pearl","weightLbs":16,"rg":2.61,"diff":0.051,"backendRating":7.8,"flarePotential":3.9,"coverType":"reactive","finish":"Pearl Reactive","category":"medium_oil","releaseYear":2023,"hookPotential":156},"marvel_solid":{"name":"Marvel Solid","weightLbs":16,"rg":2.6,"diff":0.05,"backendRating":7.5,"flarePotential":3.7,"coverType":"reactive","finish":"Solid Reactive","category":"medium_oil","releaseYear":2023,"hookPotential":150},"venom_shock":{"name":"Venom Shock","weightLbs":15,"rg":2.53,"diff":0.052,"backendRating":7.0,"flarePotential":3.4,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2022,"hookPotential":140},"pixel":{"name":"Pixel","weightLbs":16,"rg":2.5,"diff":0.042,"backendRating":6.8,"flarePotential":3.0,"coverType":"urethane","finish":"Urethane","category":"medium_oil","releaseYear":2021,"hookPotential":136},"credo_x":{"name":"Credo X","weightLbs":15,"rg":2.48,"diff":0.044,"backendRating":7.2,"flarePotential":3.1,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2023,"hookPotential":144},"frenzy":{"name":"Frenzy","weightLbs":10,"rg":2.55,"diff":0.045,"backendRating":6.5,"flarePotential":2.8,"coverType":"reactive","finish":"Reactive","category":"light_oil","releaseYear":2023,"hookPotential":130},"spare_strike":{"name":"Spare Strike","weightLbs":15,"rg":2.65,"diff":0.035,"backendRating":3.5,"flarePotential":1.5,"coverType":"plastic","finish":"Plastic","category":"spare","releaseYear":2020,"hookPotential":70},"venom_cobra":{"name":"Venom Cobra","weightLbs":15,"rg":2.56,"diff":0.049,"backendRating":6.2,"flarePotential":3.0,"coverType":"reactive","finish":"Reactive","category":"light_oil","releaseYear":2023,"hookPotential":124},"synapse_solid":{"name":"Synapse Solid","weightLbs":15,"rg":2.54,"diff":0.041,"backendRating":6.0,"flarePotential":2.9,"coverType":"reactive","finish":"Solid Reactive","category":"light_oil","releaseYear":2022,"hookPotential":120},"jackal_snap":{"name":"Jackal Snap","weightLbs":15,"rg":2.46,"diff":0.05,"backendRating":6.8,"flarePotential":3.3,"coverType":"reactive","finish":"Reactive","category":"light_oil","releaseYear":2024,"hookPotential":136},"max_pro":{"name":"Max Pro","weightLbs":12,"rg":2.68,"diff":0.028,"backendRating":2.0,"flarePotential":1.0,"coverType":"plastic","finish":"Plastic","category":"entry_level","releaseYear":2020,"hookPotential":40},"entry_pro":{"name":"Entry Pro","weightLbs":10,"rg":2.7,"diff":0.025,"backendRating":2.5,"flarePotential":0.8,"coverType":"plastic","finish":"Plastic","category":"entry_level","releaseYear":2021,"hookPotential":50},"forge_flare":{"name":"Forge Flare","weightLbs":15,"rg":2.43,"diff":0.067,"backendRating":9.0,"flarePotential":4.3,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2024,"hookPotential":180},"jackal_elite":{"name":"Jackal Elite","weightLbs":15,"rg":2.4,"diff":0.068,"backendRating":9.5,"flarePotential":4.4,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2024,"hookPotential":190},"venom_scare":{"name":"Venom Scare","weightLbs":15,"rg":2.51,"diff":0.054,"backendRating":7.8,"flarePotential":3.6,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2024,"hookPotential":156},"pro_staff_black":{"name":"Pro Staff Black","weightLbs":15,"rg":2.47,"diff":0.059,"backendRating":8.2,"flarePotential":3.7,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2023,"hookPotential":164},"pro_staff_gold":{"name":"Pro Staff Gold","weightLbs":15,"rg":2.45,"diff":0.062,"backendRating":8.5,"flarePotential":3.9,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2023,"hookPotential":170},"jackal_attack":{"name":"Jackal Attack","weightLbs":15,"rg":2.46,"diff":0.064,"backendRating":9.2,"flarePotential":4.0,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2021,"hookPotential":184},"forge_crush":{"name":"Forge Crush","weightLbs":15,"rg":2.46,"diff":0.06,"backendRating":8.0,"flarePotential":3.6,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2021,"hookPotential":160},"synapse_pearl":{"name":"Synapse Pearl","weightLbs":15,"rg":2.54,"diff":0.041,"backendRating":6.5,"flarePotential":3.1,"coverType":"reactive","finish":"Pearl Reactive","category":"light_oil","releaseYear":2022,"hookPotential":130},"credo_pearl":{"name":"Credo Pearl","weightLbs":15,"rg":2.48,"diff":0.044,"backendRating":7.5,"flarePotential":3.2,"coverType":"reactive","finish":"Pearl Reactive","category":"medium_oil","releaseYear":2023,"hookPotential":150},"venom_ruby":{"name":"Venom Ruby","weightLbs":15,"rg":2.52,"diff":0.053,"backendRating":7.3,"flarePotential":3.5,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2022,"hookPotential":146},"venom_teal":{"name":"Venom Teal","weightLbs":15,"rg":2.53,"diff":0.051,"backendRating":7.1,"flarePotential":3.4,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2021,"hookPotential":142},"marvel_halo":{"name":"Marvel Halo","weightLbs":15,"rg":2.6,"diff":0.052,"backendRating":7.6,"flarePotential":3.8,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2024,"hookPotential":152},"raptor_strike":{"name":"Raptor Strike","weightLbs":15,"rg":2.53,"diff":0.047,"backendRating":7.2,"flarePotential":3.3,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2024,"hookPotential":144},"jackal_spear":{"name":"Jackal Spear","weightLbs":15,"rg":2.44,"diff":0.063,"backendRating":9.3,"flarePotential":4.2,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2024,"hookPotential":186},"evoke_pearl":{"name":"Evoke Pearl","weightLbs":15,"rg":2.47,"diff":0.058,"backendRating":8.7,"flarePotential":3.9,"coverType":"reactive","finish":"Pearl Reactive","category":"heavy_oil","releaseYear":2023,"hookPotential":174},"evoke_solid":{"name":"Evoke Solid","weightLbs":15,"rg":2.47,"diff":0.058,"backendRating":8.5,"flarePotential":3.8,"coverType":"reactive","finish":"Solid Reactive","category":"heavy_oil","releaseYear":2023,"hookPotential":170}};
+
+var BALL_CATS = ['heavy_oil','medium_oil','light_oil','entry_level','spare'];
+var BALL_CAT_LABEL = {heavy_oil:'Heavy Oil',medium_oil:'Medium Oil',light_oil:'Light Oil',
+                       entry_level:'Entry Level',spare:'Spare'};
+var FINISHES = ['Solid Reactive','Pearl Reactive','Hybrid Reactive','Urethane','Particle','Plastic'];
+var BALL_KEYS = Object.keys(BALLS).sort(function(a,b){return BALLS[a].name.localeCompare(BALLS[b].name);});
+
+// =========================== ARSENAL BUILDER ===========================
+(function(){
+  var STORE_KEY = 'boardwork.arsenal.v1';
+  function loadBag(){
+    try{ var raw = localStorage.getItem(STORE_KEY); return raw ? JSON.parse(raw) : []; }
+    catch(e){ return []; }
+  }
+  function saveBag(bag){
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(bag)); }catch(e){}
+  }
+  var bag = loadBag();
+
+  var catalogSel = document.getElementById('catalogSel');
+  BALL_CATS.forEach(function(cat){
+    var og = document.createElement('optgroup'); og.label = BALL_CAT_LABEL[cat];
+    BALL_KEYS.filter(function(k){return BALLS[k].category===cat;}).forEach(function(k){
+      var o = document.createElement('option'); o.value=k; o.textContent=BALLS[k].name; og.appendChild(o);
+    });
+    if(og.children.length) catalogSel.appendChild(og);
+  });
+
+  var catalogPreview = document.getElementById('catalogPreview');
+  function renderPreview(){
+    var b = BALLS[catalogSel.value];
+    catalogPreview.innerHTML =
+      b.finish+' &middot; '+b.weightLbs+' lb<br>'+
+      'RG <b>'+b.rg.toFixed(2)+'</b> &nbsp; Diff <b>'+b.diff.toFixed(3)+'</b><br>'+
+      'Hook potential <b>'+b.hookPotential+'</b> / 200'+
+      '<div class="hookbar"><i style="width:'+(b.hookPotential/2)+'%"></i></div>';
+  }
+  catalogSel.addEventListener('change', renderPreview);
+  catalogSel.value = BALL_KEYS[0];
+  renderPreview();
+
+  document.getElementById('addToBag').addEventListener('click', function(){
+    var id = catalogSel.value;
+    if(bag.some(function(e){return e.id===id;})) return;
+    bag.push({id:id, benchmark:false, spare:false, finish:BALLS[id].finish});
+    saveBag(bag); renderBag(); renderChart();
+  });
+
+  var bagList = document.getElementById('bagList'), bagCount = document.getElementById('bagCount');
+  function renderBag(){
+    bagCount.textContent = bag.length ? '('+bag.length+')' : '';
+    bagList.innerHTML = '';
+    if(!bag.length){
+      bagList.innerHTML = '<div class="empty">No balls in your bag yet &mdash; add one from the catalog.</div>';
+      return;
+    }
+    bag.forEach(function(entry, idx){
+      var b = BALLS[entry.id];
+      if(!b) return;
+      var row = document.createElement('div'); row.className = 'bagRow';
+      var finishOpts = FINISHES.map(function(f){
+        return '<option value="'+f+'"'+(f===entry.finish?' selected':'')+'>'+f+'</option>';
+      }).join('');
+      row.innerHTML =
+        '<div class="rowTop"><b>'+b.name+'</b><button class="remove" title="Remove" data-i="'+idx+'">&times;</button></div>'+
+        '<div class="stats">RG '+b.rg.toFixed(2)+' &middot; Diff '+b.diff.toFixed(3)+
+          ' &middot; Hook '+b.hookPotential+'/200 &middot; '+b.weightLbs+' lb</div>'+
+        '<div class="controls">'+
+          '<label><input type="checkbox" class="bm" data-i="'+idx+'" '+(entry.benchmark?'checked':'')+'> Benchmark</label>'+
+          '<label><input type="checkbox" class="sp" data-i="'+idx+'" '+(entry.spare?'checked':'')+'> Spare ball</label>'+
+          '<select class="finish" data-i="'+idx+'">'+finishOpts+'</select>'+
+        '</div>'+
+        '<div class="future">Drill layout &amp; PAP &mdash; coming soon</div>';
+      bagList.appendChild(row);
+    });
+  }
+  bagList.addEventListener('change', function(e){
+    var i = +e.target.dataset.i; if(isNaN(i)) return;
+    if(e.target.classList.contains('bm')) bag[i].benchmark = e.target.checked;
+    else if(e.target.classList.contains('sp')) bag[i].spare = e.target.checked;
+    else if(e.target.classList.contains('finish')) bag[i].finish = e.target.value;
+    saveBag(bag);
+  });
+  bagList.addEventListener('click', function(e){
+    if(!e.target.classList.contains('remove')) return;
+    bag.splice(+e.target.dataset.i, 1);
+    saveBag(bag); renderBag(); renderChart();
+  });
+
+  // ---- arsenal shape chart: hook (vertical, backendRating/10) x length (horizontal, RG normalized) ----
+  var svg = document.getElementById('shapeChart'), SVGNS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs){
+    var e = document.createElementNS(SVGNS, tag);
+    for(var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  var PAD=30, SIZE=260, PLOT=SIZE-PAD*2;
+  function renderChart(){
+    svg.innerHTML = '';
+    var quad = [
+      {x:PAD,       y:PAD,       label:'STRONG EARLY',  color:'#5aa9ff'},
+      {x:PAD+PLOT/2,y:PAD,       label:'STRONG LENGTH', color:'#c97bff'},
+      {x:PAD,       y:PAD+PLOT/2,label:'EARLY',          color:'#3a3a3a'},
+      {x:PAD+PLOT/2,y:PAD+PLOT/2,label:'CONTROL LENGTH', color:'#5ddc8c'}
+    ];
+    quad.forEach(function(q){
+      svg.appendChild(el('rect',{x:q.x,y:q.y,width:PLOT/2,height:PLOT/2,fill:q.color,'fill-opacity':0.06}));
+      svg.appendChild(el('text',{x:q.x+4,y:q.y+11,fill:'#555','font-size':7,
+        'font-family':'sans-serif','letter-spacing':'0.5'})).textContent = q.label;
+    });
+    svg.appendChild(el('line',{x1:PAD,y1:PAD+PLOT/2,x2:PAD+PLOT,y2:PAD+PLOT/2,stroke:'#333'}));
+    svg.appendChild(el('line',{x1:PAD+PLOT/2,y1:PAD,x2:PAD+PLOT/2,y2:PAD+PLOT,stroke:'#333'}));
+    svg.appendChild(el('rect',{x:PAD,y:PAD,width:PLOT,height:PLOT,fill:'none',stroke:'#3a3a3a'}));
+    var lab = el('text',{x:SIZE/2,y:SIZE-6,fill:'#6f6f6f','font-size':8,'text-anchor':'middle',
+      'font-family':'sans-serif'}); lab.textContent='LENGTH →'; svg.appendChild(lab);
+    var lab2 = el('text',{x:10,y:SIZE/2,fill:'#6f6f6f','font-size':8,'text-anchor':'middle',
+      'font-family':'sans-serif',transform:'rotate(-90 10 '+(SIZE/2)+')'}); lab2.textContent='HOOK →';
+    svg.appendChild(lab2);
+
+    bag.forEach(function(entry){
+      var b = BALLS[entry.id]; if(!b) return;
+      var lenAxis = Math.max(0,Math.min(1,(b.rg-2.40)/(2.70-2.40)));
+      var hookAxis = Math.max(0,Math.min(1,b.backendRating/10));
+      var x = PAD + lenAxis*PLOT, y = PAD + (1-hookAxis)*PLOT;
+      svg.appendChild(el('circle',{cx:x,cy:y,r:5,fill:'#e8a34a','fill-opacity':0.85,stroke:'#101010','stroke-width':1}));
+      var t = el('text',{x:x+7,y:y+3,fill:'#c8c8c8','font-size':8,'font-family':'sans-serif'});
+      t.textContent = b.name;
+      svg.appendChild(t);
+    });
+  }
+
+  renderBag(); renderChart();
+})();
+
+// =========================== BOWLER PROFILE ===========================
+(function(){
+  var STORE_KEY = 'boardwork.bowler.v1';
+  function load(){
+    try{ var raw = localStorage.getItem(STORE_KEY); return raw ? JSON.parse(raw) :
+      {hand:'RH', style:'1h', speed:17, rev:280}; }
+    catch(e){ return {hand:'RH', style:'1h', speed:17, rev:280}; }
+  }
+  function save(p){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(p)); }catch(e){} }
+  var profile = load();
+
+  var elSpeed=document.getElementById('bwSpeed'), elRev=document.getElementById('bwRev'),
+      speedV=document.getElementById('bwSpeedV'), revV=document.getElementById('bwRevV'),
+      classEl=document.getElementById('bwClass'), detailEl=document.getElementById('bwClassDetail');
+
+  function classify(speed, rev){
+    var ratio = rev / speed;
+    if(ratio < 13) return {name:'Stroker', detail:'Low rev relative to speed &mdash; smooth, repeatable release.'};
+    if(ratio < 17) return {name:'Tweener', detail:'Balanced rev rate and speed &mdash; blends stroker and cranker traits.'};
+    if(ratio < 22) return {name:'Cranker', detail:'High rev rate relative to speed &mdash; steep, angular ball motion.'};
+    return {name:'Power Player', detail:'Very high rev rate for the speed &mdash; aggressive, high-axis-rotation game.'};
+  }
+
+  function render(){
+    document.getElementById('bwRH').classList.toggle('on', profile.hand==='RH');
+    document.getElementById('bwLH').classList.toggle('on', profile.hand==='LH');
+    document.querySelectorAll('button[data-style]').forEach(function(b){
+      b.classList.toggle('on', b.dataset.style===profile.style);
+    });
+    elSpeed.value = profile.speed; elRev.value = profile.rev;
+    speedV.textContent = profile.speed.toFixed(1)+' mph';
+    revV.textContent = profile.rev+' rpm';
+    var c = classify(profile.speed, profile.rev);
+    classEl.textContent = c.name;
+    detailEl.textContent = c.detail;
+  }
+
+  document.getElementById('bwRH').addEventListener('click', function(){profile.hand='RH';save(profile);render();});
+  document.getElementById('bwLH').addEventListener('click', function(){profile.hand='LH';save(profile);render();});
+  document.querySelectorAll('button[data-style]').forEach(function(b){
+    b.addEventListener('click', function(){profile.style=b.dataset.style;save(profile);render();});
+  });
+  elSpeed.addEventListener('input', function(){profile.speed=+elSpeed.value;save(profile);render();});
+  elRev.addEventListener('input', function(){profile.rev=+elRev.value;save(profile);render();});
+
+  render();
+})();
+</script>
 </body>
 </html>

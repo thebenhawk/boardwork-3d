@@ -28,6 +28,20 @@
   .seg button.on{background:#e8a34a;color:#111;border-color:#e8a34a}
   .seg button.l1.on{background:#5aa9ff;border-color:#5aa9ff}
   .seg button.l2.on{background:#c97bff;border-color:#c97bff}
+  #ballProps{font-size:11px;color:#8a8a8a;font-variant-numeric:tabular-nums;line-height:1.6;min-width:170px}
+  #ballProps b{color:#d6d6d6;font-weight:600}
+  #ballProps .hookbar{background:#232323;border-radius:2px;height:5px;margin-top:2px;overflow:hidden}
+  #ballProps .hookbar>i{display:block;height:100%;background:#e8a34a}
+  .zoombtn{background:#232323;color:#ccc;border:1px solid #3a3a3a;padding:4px 10px;
+           cursor:pointer;font-size:11px;border-radius:3px}
+  .zoombtn.on{background:#e8a34a;color:#111;border-color:#e8a34a}
+  #ballView{background:#141414;border-top:1px solid #2c2c2c;padding:16px 14px;display:flex;gap:14px;flex-wrap:wrap}
+  #ballView h3{width:100%;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#6f6f6f;
+               font-weight:600;margin-bottom:2px}
+  .placeholder{background:#181818;border:1px dashed #333;border-radius:5px;display:flex;
+               flex-direction:column;align-items:center;justify-content:center;gap:6px;
+               color:#555;font-size:11px;text-align:center;padding:10px}
+  .placeholder b{color:#777;font-size:12px}
 </style>
 </head>
 <body>
@@ -49,6 +63,19 @@
     <select id="preset"></select>
   </div>
   <div id="sheet"></div>
+  <div class="grp" style="min-width:170px">
+    <label>Ball <span style="text-transform:none;color:#4a4a4a">(display only)</span></label>
+    <select id="ballSel"></select>
+    <div id="ballProps"></div>
+  </div>
+  <div class="grp" style="min-width:110px">
+    <label>View</label>
+    <div class="seg">
+      <button id="zoomFit" class="zoombtn">Fit width</button>
+      <button id="zoomReset" class="zoombtn on">100%</button>
+    </div>
+    <div id="zoomV" style="font-size:10px;color:#5f5f5f">100%</div>
+  </div>
   <div class="grp">
     <label>Buffer carry <span class="val" id="bufV"></span></label>
     <input type="range" id="buf" min="0" max="0.8" step="0.05">
@@ -75,8 +102,25 @@
 
 <div id="scroller"><canvas id="lane"></canvas></div>
 
+<div id="ballView">
+  <h3>Ball view &mdash; not yet built, see AGENT_MAPPING.md</h3>
+  <div class="placeholder" style="width:220px;height:220px">
+    <b>Flare map</b>
+    <span>track migration on the ball surface<br>(Agent #10 output, not computed yet)</span>
+  </div>
+  <div class="placeholder" style="width:120px;height:220px">
+    <b>Oil on ball</b>
+    <span>vertical cross-section<br>of oil picked up by<br>the track &mdash; mirrors<br>the lane profile chart<br>above, once Agent #11's<br>per-shot pickup feeds it</span>
+  </div>
+</div>
+
 <script>
 var PATTERNS = {"Bear 38":{"src":"loads","sheet":"PDF","distance":38.0,"volume":29.58,"ratio":"2.01:1","dropBrush":34.0,"fwdVol":16.75,"revVol":12.83,"rows":[[2,38,1,50,0.0,0.5],[3,38,1,50,0.0,2.0],[4,37,2,50,2.0,6.0],[5,36,1,50,6.0,8.0],[5,34,2,50,8.0,13.0],[6,32,2,50,13.0,18.0],[7,30,2,50,18.0,23.0],[6,31,2,45,24.0,30.0],[5,33,3,45,16.0,24.0],[5,35,1,45,14.0,16.0],[4,37,1,45,11.0,14.0],[3,38,1,50,9.0,11.0],[2,38,1,50,7.0,9.0]]},"Chameleon 39":{"src":"loads","sheet":"PDF","distance":39.0,"volume":32.935,"ratio":"2.46:1","dropBrush":35.0,"fwdVol":15.32,"revVol":17.615,"rows":[[4,36,6,40,0.0,10.0],[7,30,2,40,10.0,14.0],[4,36,3,40,14.0,21.0],[9,27,2,40,21.0,26.0],[11,25,2,50,28.0,33.0],[9,27,3,55,20.0,28.0],[8,30,1,55,18.0,20.0],[7,33,3,55,13.0,18.0],[4,36,4,55,5.0,13.0]]},"Cheetah 35":{"src":"loads","sheet":"PDF","distance":35.0,"volume":28.785,"ratio":"1.56:1","dropBrush":32.0,"fwdVol":13.185,"revVol":15.6,"rows":[[4,38,1,45,0.0,0.5],[4,37,2,45,0.0,5.0],[2,38,2,45,5.0,10.0],[6,34,4,45,10.0,20.0],[7,32,2,50,24.0,30.0],[5,35,3,50,16.0,24.0],[2,38,1,50,14.0,16.0],[8,32,1,50,11.0,14.0],[3,37,3,50,5.0,11.0]]},"Dragon 47":{"src":"loads","sheet":"PDF","distance":47.0,"volume":26.4,"ratio":"2.65:1","dropBrush":40.0,"fwdVol":12.59,"revVol":13.81,"rows":[[10,28,2,55,0.0,2.0],[2,6,1,55,2.0,4.0],[32,38,1,55,4.0,6.0],[10,28,2,55,6.0,10.0],[2,6,1,55,10.0,12.0],[32,38,1,55,12.0,14.0],[10,28,2,55,14.0,18.0],[2,6,1,55,18.0,20.0],[32,38,1,55,20.0,22.0],[10,28,2,55,22.0,27.0],[2,6,1,45,27.0,29.0],[32,38,1,45,29.0,32.0],[10,28,2,45,32.0,37.0],[10,28,2,55,30.0,36.0],[32,38,1,55,27.0,30.0],[2,6,1,55,25.0,27.0],[10,28,2,55,20.0,25.0],[9,29,2,55,15.0,20.0],[2,38,4,45,7.0,15.0]]},"Scorpion 43":{"src":"loads","sheet":"PDF","distance":43.0,"volume":27.06,"ratio":"3.10:1","dropBrush":41.0,"fwdVol":13.145,"revVol":13.915,"rows":[[7,31,2,55,0.0,2.0],[2,4,1,55,2.0,4.0],[34,38,1,55,4.0,6.0],[7,31,2,55,6.0,10.0],[2,4,1,55,10.0,12.0],[34,38,1,55,12.0,14.0],[8,30,2,55,14.0,19.0],[2,4,1,55,19.0,21.0],[34,38,1,55,21.0,24.0],[9,29,2,55,24.0,29.0],[2,4,1,55,29.0,31.0],[34,38,1,55,31.0,34.0],[10,28,1,55,34.0,36.0],[9,29,2,55,31.0,36.0],[34,38,1,55,28.0,31.0],[2,4,1,55,26.0,28.0],[8,30,2,55,21.0,26.0],[34,38,1,55,18.0,21.0],[2,4,1,55,16.0,18.0],[2,38,1,55,14.0,16.0],[7,31,3,55,8.0,14.0],[2,38,1,55,6.0,8.0]]},"Shark 48":{"src":"loads","sheet":"PDF","distance":48.0,"volume":32.435,"ratio":"2.51:1","dropBrush":40.0,"fwdVol":18.85,"revVol":13.585,"rows":[[7,33,2,50,0.0,2.0],[2,38,3,50,2.0,8.0],[15,25,2,50,8.0,12.0],[2,38,3,50,12.0,19.0],[12,30,3,50,19.0,27.0],[15,25,2,50,27.0,32.0],[15,25,3,40,29.0,38.0],[11,29,3,45,21.0,29.0],[9,31,2,50,16.0,21.0],[2,38,2,50,11.0,16.0],[2,38,2,50,7.0,11.0]]},"Viper 37":{"src":"loads","sheet":"PDF","distance":37.0,"volume":25.555,"ratio":"2.65:1","dropBrush":34.0,"fwdVol":9.4,"revVol":16.155,"rows":[[6,34,2,40,0.0,3.0],[4,38,2,40,3.0,8.0],[8,30,3,40,8.0,15.0],[10,28,2,40,15.0,20.0],[9,31,3,45,23.0,31.0],[7,33,3,45,16.0,23.0],[6,35,1,45,14.0,16.0],[5,37,1,45,12.0,14.0],[4,38,1,45,10.0,12.0],[2,38,3,45,4.0,10.0]]},"Regional 37":{"src":"loads","sheet":"PDF","distance":37,"volume":32.65,"ratio":"3.08:1","dropBrush":30,"fwdVol":18.65,"revVol":14.0,"rows":[[2,38,3,50,0,4],[6,38,1,50,4,6],[7,33,3,50,6,12],[9,36,2,50,12,16],[10,29,3,50,16,23],[12,27,2,50,23,28],[11,29,2,50,23,29],[8,31,2,50,18,23],[7,33,2,50,13,18],[6,34,1,50,11,13],[2,38,3,50,5,11]]},"Badger 50":{"src":"loads","sheet":"TXT","distance":50,"volume":35.71,"ratio":null,"dropBrush":null,"fwdVol":null,"revVol":null,"rows":[[2,38,3,50,0.0,3.9],[9,31,3,45,3.9,9.8],[2,38,3,50,9.8,17.4],[12,29,3,50,17.4,25.0],[14,27,2,50,25.0,30.1],[13,25,3,45,22.1,29.7],[11,28,3,50,14.5,22.1],[10,30,3,50,10.6,14.5],[7,33,2,50,8.7,10.6],[5,35,1,50,2.8,8.7],[2,38,3,50,0.0,2.8]],"note":"machine file only - volume derived from loads, not sheet-verified"},"Wolf 34":{"src":"zones","sheet":"TSV","distance":34.0,"volume":31.785,"ratio":null,"dropBrush":null,"fwdVol":null,"revVol":null,"boards":[39,38,37,36,35,34,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"zoneEnd":[5.0,8.0,14.0,18.0,23.0,28.0,34.0],"zoneVol":[7.18862,4.25281,8.27174,4.83042,4.46826,2.77275,0.0],"zoneUnits":[[0.0,35.0,55.0,94.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,82.0,43.0,21.0,0.0],[0.0,31.0,47.0,79.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,70.0,37.0,18.0,0.0],[0.0,25.0,39.0,65.0,86.0,86.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,100.0,86.0,57.0,30.0,15.0,0.0],[0.0,20.0,31.0,51.0,69.0,69.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,89.0,69.0,45.0,24.0,11.0,0.0],[0.0,14.0,22.0,37.0,51.0,51.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,66.0,51.0,33.0,17.0,8.0,0.0],[0.0,9.0,14.0,23.0,31.0,31.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,41.0,31.0,20.0,11.0,5.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]]},"Bat 37":{"src":"loads","sheet":"PDF","distance":37.0,"volume":25.2,"ratio":"2.81:1","dropBrush":29.0,"fwdVol":12.85,"revVol":12.35,"rows":[[2,38,1,50,0.0,0.5],[4,36,1,50,0.0,2.0],[6,34,3,50,2.0,8.0],[7,33,2,50,8.0,13.0],[9,31,2,50,13.0,18.0],[10,30,2,50,22.0,28.0],[9,31,2,50,17.0,22.0],[8,32,1,50,14.0,17.0],[7,33,1,50,12.0,14.0],[4,36,1,50,10.0,12.0],[2,38,2,50,6.0,10.0]]}};
+
+// Static snapshot of balls_database.py (root of this repo). hookPotential and
+// finish are derived here (backendRating*20, and a guess from the ball name
+// where the source data doesn't record finish) - not manufacturer figures.
+var BALLS = {"jackal_ghost":{"name":"Jackal Ghost","weightLbs":15,"rg":2.44,"diff":0.063,"backendRating":10,"flarePotential":4.1,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2023,"hookPotential":200},"jackal_ghost_pearl":{"name":"Jackal Ghost Pearl","weightLbs":15,"rg":2.44,"diff":0.063,"backendRating":9.5,"flarePotential":4.0,"coverType":"reactive","finish":"Pearl Reactive","category":"heavy_oil","releaseYear":2023,"hookPotential":190},"jackal_king":{"name":"Jackal King","weightLbs":15,"rg":2.42,"diff":0.065,"backendRating":9.8,"flarePotential":4.2,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2022,"hookPotential":196},"evoke_mayhem":{"name":"Evoke Mayhem","weightLbs":15,"rg":2.47,"diff":0.058,"backendRating":8.5,"flarePotential":3.8,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2023,"hookPotential":170},"raptor_reign":{"name":"Raptor Reign","weightLbs":15,"rg":2.52,"diff":0.048,"backendRating":8.5,"flarePotential":3.6,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2024,"hookPotential":170},"forge_pearl":{"name":"Forge Pearl","weightLbs":16,"rg":2.49,"diff":0.061,"backendRating":8.0,"flarePotential":3.7,"coverType":"reactive","finish":"Pearl Reactive","category":"heavy_oil","releaseYear":2021,"hookPotential":160},"forge_solid":{"name":"Forge Solid","weightLbs":16,"rg":2.48,"diff":0.059,"backendRating":7.8,"flarePotential":3.5,"coverType":"reactive","finish":"Solid Reactive","category":"heavy_oil","releaseYear":2021,"hookPotential":156},"forge_fire":{"name":"Forge Fire","weightLbs":15,"rg":2.45,"diff":0.062,"backendRating":8.2,"flarePotential":3.8,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2022,"hookPotential":164},"nebula":{"name":"Nebula","weightLbs":15,"rg":2.5,"diff":0.046,"backendRating":7.5,"flarePotential":3.2,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2023,"hookPotential":150},"phaze_ii":{"name":"Phaze II","weightLbs":16,"rg":2.55,"diff":0.055,"backendRating":7.2,"flarePotential":3.5,"coverType":"particle","finish":"Particle","category":"medium_oil","releaseYear":2022,"hookPotential":144},"marvel_pearl":{"name":"Marvel Pearl","weightLbs":16,"rg":2.61,"diff":0.051,"backendRating":7.8,"flarePotential":3.9,"coverType":"reactive","finish":"Pearl Reactive","category":"medium_oil","releaseYear":2023,"hookPotential":156},"marvel_solid":{"name":"Marvel Solid","weightLbs":16,"rg":2.6,"diff":0.05,"backendRating":7.5,"flarePotential":3.7,"coverType":"reactive","finish":"Solid Reactive","category":"medium_oil","releaseYear":2023,"hookPotential":150},"venom_shock":{"name":"Venom Shock","weightLbs":15,"rg":2.53,"diff":0.052,"backendRating":7.0,"flarePotential":3.4,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2022,"hookPotential":140},"pixel":{"name":"Pixel","weightLbs":16,"rg":2.5,"diff":0.042,"backendRating":6.8,"flarePotential":3.0,"coverType":"urethane","finish":"Urethane","category":"medium_oil","releaseYear":2021,"hookPotential":136},"credo_x":{"name":"Credo X","weightLbs":15,"rg":2.48,"diff":0.044,"backendRating":7.2,"flarePotential":3.1,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2023,"hookPotential":144},"frenzy":{"name":"Frenzy","weightLbs":10,"rg":2.55,"diff":0.045,"backendRating":6.5,"flarePotential":2.8,"coverType":"reactive","finish":"Reactive","category":"light_oil","releaseYear":2023,"hookPotential":130},"spare_strike":{"name":"Spare Strike","weightLbs":15,"rg":2.65,"diff":0.035,"backendRating":3.5,"flarePotential":1.5,"coverType":"plastic","finish":"Plastic","category":"spare","releaseYear":2020,"hookPotential":70},"venom_cobra":{"name":"Venom Cobra","weightLbs":15,"rg":2.56,"diff":0.049,"backendRating":6.2,"flarePotential":3.0,"coverType":"reactive","finish":"Reactive","category":"light_oil","releaseYear":2023,"hookPotential":124},"synapse_solid":{"name":"Synapse Solid","weightLbs":15,"rg":2.54,"diff":0.041,"backendRating":6.0,"flarePotential":2.9,"coverType":"reactive","finish":"Solid Reactive","category":"light_oil","releaseYear":2022,"hookPotential":120},"jackal_snap":{"name":"Jackal Snap","weightLbs":15,"rg":2.46,"diff":0.05,"backendRating":6.8,"flarePotential":3.3,"coverType":"reactive","finish":"Reactive","category":"light_oil","releaseYear":2024,"hookPotential":136},"max_pro":{"name":"Max Pro","weightLbs":12,"rg":2.68,"diff":0.028,"backendRating":2.0,"flarePotential":1.0,"coverType":"plastic","finish":"Plastic","category":"entry_level","releaseYear":2020,"hookPotential":40},"entry_pro":{"name":"Entry Pro","weightLbs":10,"rg":2.7,"diff":0.025,"backendRating":2.5,"flarePotential":0.8,"coverType":"plastic","finish":"Plastic","category":"entry_level","releaseYear":2021,"hookPotential":50},"forge_flare":{"name":"Forge Flare","weightLbs":15,"rg":2.43,"diff":0.067,"backendRating":9.0,"flarePotential":4.3,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2024,"hookPotential":180},"jackal_elite":{"name":"Jackal Elite","weightLbs":15,"rg":2.4,"diff":0.068,"backendRating":9.5,"flarePotential":4.4,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2024,"hookPotential":190},"venom_scare":{"name":"Venom Scare","weightLbs":15,"rg":2.51,"diff":0.054,"backendRating":7.8,"flarePotential":3.6,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2024,"hookPotential":156},"pro_staff_black":{"name":"Pro Staff Black","weightLbs":15,"rg":2.47,"diff":0.059,"backendRating":8.2,"flarePotential":3.7,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2023,"hookPotential":164},"pro_staff_gold":{"name":"Pro Staff Gold","weightLbs":15,"rg":2.45,"diff":0.062,"backendRating":8.5,"flarePotential":3.9,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2023,"hookPotential":170},"jackal_attack":{"name":"Jackal Attack","weightLbs":15,"rg":2.46,"diff":0.064,"backendRating":9.2,"flarePotential":4.0,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2021,"hookPotential":184},"forge_crush":{"name":"Forge Crush","weightLbs":15,"rg":2.46,"diff":0.06,"backendRating":8.0,"flarePotential":3.6,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2021,"hookPotential":160},"synapse_pearl":{"name":"Synapse Pearl","weightLbs":15,"rg":2.54,"diff":0.041,"backendRating":6.5,"flarePotential":3.1,"coverType":"reactive","finish":"Pearl Reactive","category":"light_oil","releaseYear":2022,"hookPotential":130},"credo_pearl":{"name":"Credo Pearl","weightLbs":15,"rg":2.48,"diff":0.044,"backendRating":7.5,"flarePotential":3.2,"coverType":"reactive","finish":"Pearl Reactive","category":"medium_oil","releaseYear":2023,"hookPotential":150},"venom_ruby":{"name":"Venom Ruby","weightLbs":15,"rg":2.52,"diff":0.053,"backendRating":7.3,"flarePotential":3.5,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2022,"hookPotential":146},"venom_teal":{"name":"Venom Teal","weightLbs":15,"rg":2.53,"diff":0.051,"backendRating":7.1,"flarePotential":3.4,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2021,"hookPotential":142},"marvel_halo":{"name":"Marvel Halo","weightLbs":15,"rg":2.6,"diff":0.052,"backendRating":7.6,"flarePotential":3.8,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2024,"hookPotential":152},"raptor_strike":{"name":"Raptor Strike","weightLbs":15,"rg":2.53,"diff":0.047,"backendRating":7.2,"flarePotential":3.3,"coverType":"reactive","finish":"Reactive","category":"medium_oil","releaseYear":2024,"hookPotential":144},"jackal_spear":{"name":"Jackal Spear","weightLbs":15,"rg":2.44,"diff":0.063,"backendRating":9.3,"flarePotential":4.2,"coverType":"reactive","finish":"Reactive","category":"heavy_oil","releaseYear":2024,"hookPotential":186},"evoke_pearl":{"name":"Evoke Pearl","weightLbs":15,"rg":2.47,"diff":0.058,"backendRating":8.7,"flarePotential":3.9,"coverType":"reactive","finish":"Pearl Reactive","category":"heavy_oil","releaseYear":2023,"hookPotential":174},"evoke_solid":{"name":"Evoke Solid","weightLbs":15,"rg":2.47,"diff":0.058,"backendRating":8.5,"flarePotential":3.8,"coverType":"reactive","finish":"Solid Reactive","category":"heavy_oil","releaseYear":2023,"hookPotential":170}};
 
 (function () {
   "use strict";
@@ -435,7 +479,7 @@ var PATTERNS = {"Bear 38":{"src":"loads","sheet":"PDF","distance":38.0,"volume":
 
   canvas.addEventListener('mousemove',function(e){
     var r=canvas.getBoundingClientRect();
-    var x=e.clientX-r.left,y=e.clientY-r.top;
+    var x=(e.clientX-r.left)/zoom,y=(e.clientY-r.top)/zoom;
     var li=(y<LANE_Y[0]+LANE_W+GAP/2)?0:1;
     var ly=LANE_Y[li],L=lanes[li];
     var ft=xToFt(x),bd=yToBoard(ly,y);
@@ -449,16 +493,16 @@ var PATTERNS = {"Bear 38":{"src":"loads","sheet":"PDF","distance":38.0,"volume":
   var dragging=false;
   function setXS(clientX){
     var r=canvas.getBoundingClientRect();
-    var ft=xToFt(clientX-r.left);
+    var ft=xToFt((clientX-r.left)/zoom);
     g.xs=Math.max(0,Math.min(60,Math.round(ft*2)/2));
     refresh();
   }
   canvas.addEventListener('mousedown',function(e){
     var r=canvas.getBoundingClientRect();
-    var x=e.clientX-r.left;
+    var x=(e.clientX-r.left)/zoom;
     // grabbing near the line drags it; clicking elsewhere selects that lane
     if(Math.abs(x-ftToX(g.xs))<12){ dragging=true; e.preventDefault(); return; }
-    var li=((e.clientY-r.top)<LANE_Y[0]+LANE_W+GAP/2)?0:1;
+    var li=((e.clientY-r.top)/zoom<LANE_Y[0]+LANE_W+GAP/2)?0:1;
     if(li!==sel){ sel=li; syncTabs(); }
     setXS(e.clientX);
   });
@@ -473,6 +517,53 @@ var PATTERNS = {"Bear 38":{"src":"loads","sheet":"PDF","distance":38.0,"volume":
     o.textContent=k+'  ('+P.distance+'ft, '+P.volume.toFixed(1)+'mL)';
     elPreset.appendChild(o);
   });
+
+  // ---------------- ball dropdown (display only - not wired into the sim) ----------------
+  var elBall=document.getElementById('ballSel'), ballProps=document.getElementById('ballProps');
+  var BALL_CATS=['heavy_oil','medium_oil','light_oil','entry_level','spare'];
+  var BALL_CAT_LABEL={heavy_oil:'Heavy Oil',medium_oil:'Medium Oil',light_oil:'Light Oil',
+                       entry_level:'Entry Level',spare:'Spare'};
+  var BALL_KEYS=Object.keys(BALLS).sort(function(a,b){return BALLS[a].name.localeCompare(BALLS[b].name);});
+  BALL_CATS.forEach(function(cat){
+    var og=document.createElement('optgroup');og.label=BALL_CAT_LABEL[cat];
+    BALL_KEYS.filter(function(k){return BALLS[k].category===cat;}).forEach(function(k){
+      var o=document.createElement('option');o.value=k;o.textContent=BALLS[k].name;og.appendChild(o);
+    });
+    if(og.children.length)elBall.appendChild(og);
+  });
+  function drawBallProps(){
+    var b=BALLS[elBall.value];
+    ballProps.innerHTML=
+      b.finish+' &middot; '+b.weightLbs+' lb<br>'+
+      'RG <b>'+b.rg.toFixed(2)+'</b> &nbsp; Diff <b>'+b.diff.toFixed(3)+'</b><br>'+
+      'Hook potential <b>'+b.hookPotential+'</b> / 200'+
+      '<div class="hookbar"><i style="width:'+(b.hookPotential/2)+'%"></i></div>';
+  }
+  elBall.addEventListener('change',drawBallProps);
+  elBall.value=BALL_KEYS[0];
+  drawBallProps();
+
+  // ---------------- zoom (CSS-scales the canvas; fit-width keeps aspect ratio
+  // since both dimensions scale by the same factor) ----------------
+  var zoom=1, fitMode=false;
+  function applyZoom(z){
+    zoom=Math.max(0.15,Math.min(2,z));
+    canvas.style.width=(W*zoom)+'px';
+    canvas.style.height=(H*zoom)+'px';
+    document.getElementById('zoomV').textContent=Math.round(zoom*100)+'%';
+  }
+  document.getElementById('zoomFit').addEventListener('click',function(){
+    fitMode=true;this.classList.add('on');document.getElementById('zoomReset').classList.remove('on');
+    applyZoom(document.getElementById('scroller').clientWidth/W);
+  });
+  document.getElementById('zoomReset').addEventListener('click',function(){
+    fitMode=false;this.classList.add('on');document.getElementById('zoomFit').classList.remove('on');
+    applyZoom(1);
+  });
+  window.addEventListener('resize',function(){
+    if(fitMode) applyZoom(document.getElementById('scroller').clientWidth/W);
+  });
+
   var el={};['buf','shot','bp','xs'].forEach(function(i){el[i]=document.getElementById(i);});
   var lab={buf:document.getElementById('bufV'),shot:document.getElementById('shotV'),
            bp:document.getElementById('bpV'),xs:document.getElementById('xsV')};
